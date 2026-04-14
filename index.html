@@ -90,24 +90,26 @@
     function logoutManager() { isManager = false; updateUI(); loadReports(); }
 
     async function report(type) {
-        if (isManager) return;
-        const kId = document.getElementById('kitchen').value;
-        const pId = document.getElementById('product').value;
-        
-        const { error } = await supabaseClient.from('reports').upsert(
-    { 
-        kitchen_id: parseInt(kId), 
-        product_id: parseInt(pId), 
-        type: type 
-    },
-    { onConflict: 'kitchen_id,product_id' }
+    if (isManager) return;
+    const kId = document.getElementById('kitchen').value;
+    const pId = document.getElementById('product').value;
+    
+    const { error } = await supabaseClient.from('reports').upsert(
+        { kitchen_id: parseInt(kId), product_id: parseInt(pId), type: type },
+        { onConflict: 'kitchen_id,product_id' }
     );
+    
+    if (!error) {
+        // פידבק ויזואלי ופיזי
+        if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+        if (window.navigator.vibrate) window.navigator.vibrate(50);
         
-        if (!error) {
-            if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-            setTimeout(loadReports, 300); 
-        }
+        // רענון הרשימה מיד
+        await loadReports(); 
+    } else {
+        console.error("טעות בעדכון:", error);
     }
+}
 
     async function deleteReport(id) {
         await supabaseClient.from('reports').delete().eq('id', id);
