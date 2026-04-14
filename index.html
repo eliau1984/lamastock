@@ -22,7 +22,6 @@
         .container { max-width:500px; margin:auto; padding:15px; }
         select { width:100%; padding:16px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 16px; appearance: none; }
         
-        /* כפתורי דיווח */
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
         .buttons button { flex:1; padding:18px 10px; border-radius:20px; border:none; font-weight:700; color: white; display: flex; flex-direction: column; align-items: center; gap: 8px; transition: transform 0.1s; }
         .buttons button:active { transform: scale(0.95); }
@@ -31,7 +30,6 @@
         .low-btn { background:#ffcc00; color:black; }
         .ok-btn { background:#34c759; }
 
-        /* כרטיסיות דיווחים עם סלייד */
         .card-wrapper { position: relative; margin-bottom: 12px; border-radius: 20px; background: #ff3b30; overflow: hidden; }
         .card { 
             background:white; position:relative; z-index:2; border-radius:20px; padding:20px; 
@@ -44,7 +42,7 @@
         .delete-action { 
             position: absolute; right: 0; top: 0; bottom: 0; width: 100px; 
             background: #ff3b30; color: white; display: flex; align-items: center; 
-            justify-content: center; font-weight: 700; font-size: 14px; z-index: 1;
+            justify-content: center; font-weight: 700; font-size: 16px; z-index: 1;
         }
         .card-title { font-weight:700; font-size: 18px; }
         .card-sub { color:#8e8e93; font-size: 14px; }
@@ -98,14 +96,10 @@
         if (isManager) return;
         const kId = document.getElementById('kitchen').value;
         const pId = document.getElementById('product').value;
-        
         const { error } = await supabaseClient.from('reports').insert([{ kitchen_id: kId, product_id: pId, type: type }]);
-        
         if (!error) {
             if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
             if (window.navigator.vibrate) window.navigator.vibrate(50);
-            
-            // ריענון מיידי של הרשימה
             setTimeout(loadReports, 500); 
         }
     }
@@ -137,35 +131,24 @@
             card.className = `card ${r.type.toLowerCase()}`;
             card.innerHTML = `<div><div class="card-title">${r.kitchens?.name || ''}</div><div class="card-sub">${r.products?.name || ''}</div></div><div>${r.type === 'MISSING' ? '❌' : r.type === 'LOW' ? '⚠️' : '✅'}</div>`;
             
-            // לוגיקה של סלייד (רק למנהל)
-         // לוגיקה של סלייד (רק למנהל)
             if (isManager) {
                 let startX = 0;
                 let currentX = 0;
-                let isMoving = false;
-
                 card.addEventListener('touchstart', (e) => {
                     startX = e.touches[0].clientX;
-                    isMoving = true;
-                    card.style.transition = "none"; // ביטול אנימציה בזמן גרירה
+                    card.style.transition = "none";
                 }, {passive: true});
 
                 card.addEventListener('touchmove', (e) => {
-                    if (!isMoving) return;
                     currentX = e.touches[0].clientX - startX;
-                    
-                    // מאפשר גרירה רק שמאלה ורק עד גבול מסוים (100 פיקסלים)
-                    if (currentX < 0 && currentX > -150) {
+                    if (currentX < 0 && currentX > -120) {
                         card.style.transform = `translateX(${currentX}px)`;
                     }
                 }, {passive: true});
 
                 card.addEventListener('touchend', () => {
-                    isMoving = false;
                     card.style.transition = "transform 0.3s ease";
-                    
-                    // אם גררנו מספיק רחוק (מעל 70 פיקסלים), תישאר פתוח
-                    if (currentX < -70) {
+                    if (currentX < -60) {
                         card.style.transform = "translateX(-100px)";
                     } else {
                         card.style.transform = "translateX(0)";
@@ -173,15 +156,17 @@
                     currentX = 0;
                 });
 
-                // תיקון פונקציית המחיקה - לחיצה על הרקע האדום
-                deleteAction.onclick = async () => {
-                    if (confirm("למחוק דיווח?")) {
-                        await deleteReport(r.id);
-                    } else {
-                        card.style.transform = "translateX(0)";
-                    }
+                deleteAction.onclick = (e) => {
+                    e.stopPropagation();
+                    if (confirm("למחוק דיווח?")) deleteReport(r.id);
                 };
             }
+
+            wrapper.appendChild(deleteAction);
+            wrapper.appendChild(card);
+            list.appendChild(wrapper);
+        });
+    }
 
     async function loadData() {
         const kSelect = document.getElementById('kitchen');
