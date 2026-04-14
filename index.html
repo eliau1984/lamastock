@@ -10,7 +10,7 @@
     <style>
         body { margin:0; font-family:-apple-system, system-ui, sans-serif; background:#f2f2f7; user-select: none; }
         .header { text-align: center; padding: 20px; background: linear-gradient(135deg, #6a5cff, #4a3fff); }
-        .logo-big { width: 400px; max-width: 90%; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .logo-big { width: 350px; max-width: 90%; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
         .top-bar { display:flex; justify-content:space-between; padding:15px; }
         .top-bar button { background: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         #logoutBtn { display: none; background: #ff3b30; color: white; }
@@ -24,11 +24,10 @@
 
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
         .buttons button { 
-            flex:1; height: 120px; border-radius:25px; border:none; 
+            flex:1; height: 110px; border-radius:25px; border:none; 
             font-weight:800; color: white; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; gap: 10px; font-size: 18px;
+            align-items: center; justify-content: center; gap: 8px; font-size: 18px;
         }
-        .btn-icon { font-size: 32px; background: rgba(255,255,255,0.2); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 15px; }
         
         .missing-btn { background:#ff3b30; }
         .low-btn { background:#ffcc00; color: #000 !important; }
@@ -51,9 +50,9 @@
         <select id="kitchen" onchange="loadReports()"></select>
         <select id="product"></select>
         <div class="buttons" id="actionButtons">
-            <button class="missing-btn" onclick="report('MISSING')"><div class="btn-icon">❌</div>חסר</button>
-            <button class="low-btn" onclick="report('LOW')"><div class="btn-icon">⚠️</div>מעט</button>
-            <button class="ok-btn" onclick="report('OK')"><div class="btn-icon">✅</div>יש</button>
+            <button class="missing-btn" onclick="report('MISSING')">❌<br>חסר</button>
+            <button class="low-btn" onclick="report('LOW')">⚠️<br>מעט</button>
+            <button class="ok-btn" onclick="report('OK')">✅<br>יש</button>
         </div>
         <div id="reportsList"></div>
     </div>
@@ -72,22 +71,25 @@
     }
 
     async function loginManager() {
-        if (prompt("סיסמה:") === "1234") { isManager = true; updateUI(); loadReports(); }
+        const pass = prompt("סיסמה:");
+        if (pass === "1234") { isManager = true; updateUI(); loadReports(); }
     }
 
     function logoutManager() { isManager = false; updateUI(); loadReports(); }
 
     async function report(type) {
-        const kId = document.getElementById('kitchen').value;
-        const pId = document.getElementById('product').value;
-        const { error } = await supabaseClient.from('reports').upsert(
-            { kitchen_id: parseInt(kId), product_id: parseInt(pId), type: type },
-            { onConflict: 'kitchen_id,product_id' }
-        );
-        if (!error) {
-            if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-            loadReports();
-        } else alert("שגיאה: " + error.message);
+        try {
+            const kId = document.getElementById('kitchen').value;
+            const pId = document.getElementById('product').value;
+            const { error } = await supabaseClient.from('reports').upsert(
+                { kitchen_id: parseInt(kId), product_id: parseInt(pId), type: type },
+                { onConflict: 'kitchen_id,product_id' }
+            );
+            if (!error) {
+                if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+                loadReports();
+            } else { alert("שגיאה בדיווח: " + error.message); }
+        } catch (e) { alert("שגיאה: " + e.message); }
     }
 
     async function deleteReport(id) {
@@ -96,7 +98,8 @@
     }
 
     async function loadReports() {
-        const { data } = await supabaseClient.from('reports').select(`id, type, kitchens(name), products(name)` bits).neq('type', 'OK').order('id', { ascending: false });
+        const { data, error } = await supabaseClient.from('reports').select('id, type, kitchens(name), products(name)').neq('type', 'OK');
+        if (error) return;
         const list = document.getElementById('reportsList');
         list.innerHTML = "";
         data?.forEach(r => {
@@ -107,33 +110,37 @@
             del.onclick = () => deleteReport(r.id);
             const card = document.createElement("div");
             card.className = `card ${r.type.toLowerCase()}`;
-            card.innerHTML = `<div><b>${r.kitchens.name}</b><br>${r.products.name}</div><div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>`;
+            card.innerHTML = `<div><b>${r.kitchens?.name || 'מטבח'}</b><br>${r.products?.name || 'מוצר'}</div><div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>`;
             
             let startX = 0, currentX = 0;
-            card.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+            card.addEventListener('touchstart', e => startX = e.touches[0].clientX, {passive: true});
             card.addEventListener('touchmove', e => {
                 currentX = e.touches[0].clientX - startX;
                 if (currentX < 0 && currentX > -100) card.style.transform = `translateX(${currentX}px)`;
-            });
+            }, {passive: true});
             card.addEventListener('touchend', () => {
                 if (currentX < -70) { if (confirm("למחוק?")) deleteReport(r.id); else card.style.transform = 'translateX(0)'; }
                 else card.style.transform = 'translateX(0)';
+                currentX = 0;
             });
-
             wrapper.appendChild(del); wrapper.appendChild(card); list.appendChild(wrapper);
         });
     }
 
     async function init() {
-        const { data: ks } = await supabaseClient.from('kitchens').select('*');
-        const { data: ps } = await supabaseClient.from('products').select('*');
-        const kSel = document.getElementById('kitchen');
-        const pSel = document.getElementById('product');
-        ks?.forEach(k => kSel.add(new Option(k.name, k.id)));
-        ps?.forEach(p => pSel.add(new Option(p.name, p.id)));
-        loadReports();
+        try {
+            const { data: ks } = await supabaseClient.from('kitchens').select('*');
+            const { data: ps } = await supabaseClient.from('products').select('*');
+            const kSel = document.getElementById('kitchen');
+            const pSel = document.getElementById('product');
+            ks?.forEach(k => kSel.add(new Option(k.name, k.id)));
+            ps?.forEach(p => pSel.add(new Option(p.name, p.id)));
+            loadReports();
+        } catch (e) { console.error("Init error:", e); }
     }
     init();
+
+    supabaseClient.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => loadReports()).subscribe();
 </script>
 </body>
 </html>
