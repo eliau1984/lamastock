@@ -7,66 +7,85 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
-    <link rel="icon" type="image/png" sizes="192x192" href="logo.png">
-    <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#6a5cff">
-    <meta name="mobile-web-app-capable" content="yes">
-
     <style>
-        body { 
-            margin:0; font-family:-apple-system, system-ui, sans-serif; background:#f2f2f7; 
-            user-select: none; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch;
-        }
-        .header { text-align: center; padding: 40px 15px 30px; background: linear-gradient(135deg, #6a5cff, #4a3fff); color: white; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; }
-        .logo-big { width: 400px; max-width: 80%; height: auto; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .top-bar { display:flex; justify-content:space-between; padding:15px; }
-        .top-bar button { background: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        body { margin:0; font-family:-apple-system, system-ui, sans-serif; background:#f2f2f7; user-select: none; overflow-x: hidden; }
+        .header { text-align: center; padding: 30px 15px; background: linear-gradient(135deg, #6a5cff, #4a3fff); color: white; }
+        .logo-big { width: 320px; max-width: 80%; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+        .top-bar { display:flex; justify-content:space-between; padding:10px 15px; background: #fff; }
+        .top-bar button { background: #f2f2f7; border: none; padding: 8px 15px; border-radius: 10px; font-weight: 600; }
         #logoutBtn { display: none; background: #ff3b30; color: white; }
-        .container { max-width:500px; margin:auto; padding:15px; }
-        select { width:100%; padding:16px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 16px; appearance: none; }
         
-        .buttons { display:flex; gap:10px; margin-bottom: 25px; }
-        .buttons button { flex:1; padding:18px 10px; border-radius:20px; border:none; font-weight:700; color: white; display: flex; flex-direction: column; align-items: center; gap: 8px; transition: transform 0.1s; }
-        .buttons button:disabled { opacity: 0.5; filter: grayscale(0.8); cursor: not-allowed; transform: none !important; }
-        .buttons button:active { transform: scale(0.95); }
-        .btn-icon { background: rgba(255, 255, 255, 0.3); width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 20px; }
-        .missing-btn { background:#ff3b30; }
-        .low-btn { background:#ffcc00; color:black; }
-        .ok-btn { background:#34c759; }
+        .container { max-width:500px; margin:auto; padding:20px; }
+        
+        /* עיצוב שדות הבחירה כמו בתמונה */
+        select { 
+            width:100%; padding:18px; margin-bottom:15px; border-radius:15px; 
+            border: 1px solid #ddd; background:white; font-size: 18px; font-weight: 600;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center;
+        }
 
+        /* עיצוב הכפתורים כמו בתמונה */
+        .buttons { display:flex; gap:12px; margin-bottom: 30px; }
+        .buttons button { 
+            flex:1; height: 100px; border-radius:20px; border:none; 
+            font-weight:800; color: white; font-size: 18px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        .buttons button:active { transform: scale(0.95); }
+        .buttons button:disabled { opacity: 0.5; filter: grayscale(1); }
+        
+        .ok-btn { background:#34c759; }
+        .low-btn { background:#ffcc00; color: #000 !important; }
+        .missing-btn { background:#ff3b30; }
+        
+        .btn-icon-img { width: 40px; height: 40px; }
+
+        /* רשימת הדיווחים */
         .card-wrapper { position: relative; margin-bottom: 12px; border-radius: 20px; background: #ff3b30; overflow: hidden; }
         .card { 
             background:white; position:relative; z-index:2; border-radius:20px; padding:20px; 
             display: flex; justify-content: space-between; align-items: center;
-            transition: transform 0.3s ease; touch-action: pan-y; will-change: transform;
+            transition: transform 0.3s ease; touch-action: pan-y;
         }
-        .card.missing { border-right:6px solid #ff3b30; }
-        .card.low { border-right:6px solid #ffcc00; }
+        .card.missing { border-right:8px solid #ff3b30; }
+        .card.low { border-right:8px solid #ffcc00; }
         .delete-action { 
             position: absolute; right: 0; top: 0; bottom: 0; width: 100px; 
             background: #ff3b30; color: white; display: flex; align-items: center; 
-            justify-content: center; font-weight: 700; font-size: 16px; z-index: 1;
+            justify-content: center; font-weight: 700; z-index: 1;
         }
-        .card-title { font-weight:700; font-size: 18px; }
-        .card-sub { color:#8e8e93; font-size: 14px; }
     </style>
 </head>
 <body>
-    <div class="header"><img src="https://imgur.com/F8tpXBE.png" class="logo-big"></div>
-    <div class="top-bar">
-        <button id="loginBtn" onclick="loginManager()">👤 איש משק</button>
-        <button id="logoutBtn" onclick="logoutManager()">יציאה 👋</button>
+
+<div class="header">
+    <img src="https://imgur.com/F8tpXBE.png" class="logo-big">
+</div>
+
+<div class="top-bar">
+    <button id="loginBtn" onclick="loginManager()">👤 איש משק</button>
+    <button id="logoutBtn" onclick="logoutManager()">יציאה 👋</button>
+</div>
+
+<div class="container">
+    <select id="kitchen" onchange="loadReports()"></select>
+    <select id="product"></select>
+
+    <div class="buttons" id="actionButtons">
+        <button class="ok-btn" onclick="report('OK')">
+            <img src="https://i.imgur.com/Tid7O0I.png" class="btn-icon-img"> יש
+        </button>
+        <button class="low-btn" onclick="report('LOW')">
+            <img src="https://i.imgur.com/7H66z5u.png" class="btn-icon-img"> מעט
+        </button>
+        <button class="missing-btn" onclick="report('MISSING')">
+            <img src="https://i.imgur.com/o6v7aO1.png" class="btn-icon-img"> חסר
+        </button>
     </div>
-    <div class="container">
-        <select id="kitchen" onchange="loadReports()"></select>
-        <select id="product"></select>
-        <div class="buttons" id="actionButtons">
-            <button class="missing-btn" onclick="report('MISSING')"><span class="btn-icon">❌</span><span>חסר</span></button>
-            <button class="low-btn" onclick="report('LOW')"><span class="btn-icon">⚠️</span><span>מעט</span></button>
-            <button class="ok-btn" onclick="report('OK')"><span class="btn-icon">✅</span><span>יש</span></button>
-        </div>
-        <div id="reportsList"></div>
-    </div>
+
+    <div id="reportsList"></div>
+</div>
 
 <script>
     const SUPABASE_URL = "https://wjkqdlafwuucmpluvueu.supabase.co";
@@ -74,136 +93,101 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let isManager = false;
-    const PASSWORD = "1234";
 
     function updateUI() {
         document.getElementById('loginBtn').style.display = isManager ? 'none' : 'block';
         document.getElementById('logoutBtn').style.display = isManager ? 'block' : 'none';
-        document.querySelectorAll('#actionButtons button, select').forEach(el => el.disabled = isManager);
+        const btns = document.querySelectorAll('#actionButtons button, select');
+        btns.forEach(b => b.disabled = isManager);
     }
 
-    function loginManager() {
-        const pass = prompt("🔐 סיסמת איש משק:");
-        if (pass === PASSWORD) { isManager = true; updateUI(); loadReports(); }
+    async function loginManager() {
+        const pass = prompt("סיסמת מנהל:");
+        if (pass === "1234") { isManager = true; updateUI(); loadReports(); }
     }
 
     function logoutManager() { isManager = false; updateUI(); loadReports(); }
 
     async function report(type) {
-        if (isManager) return;
         const kId = document.getElementById('kitchen').value;
         const pId = document.getElementById('product').value;
-        
-        // UPSERT - השורה הקריטית
+        if(!kId || !pId) return;
+
         const { error } = await supabaseClient.from('reports').upsert(
             { kitchen_id: parseInt(kId), product_id: parseInt(pId), type: type },
             { onConflict: 'kitchen_id,product_id' }
         );
-        
+
         if (!error) {
             if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-            if (window.navigator.vibrate) window.navigator.vibrate(50);
-            setTimeout(loadReports, 300); 
+            loadReports();
         } else {
-            alert("שגיאה: " + error.message);
+            console.error(error);
         }
     }
 
     async function deleteReport(id) {
-        const { error } = await supabaseClient.from('reports').delete().eq('id', id);
-        if (!error) loadReports();
+        await supabaseClient.from('reports').delete().eq('id', id);
+        loadReports();
     }
 
     async function loadReports() {
         const { data, error } = await supabaseClient.from('reports')
-            .select(`id, type, kitchen_id, product_id, kitchens(name), products(name)`)
-            .neq('type', 'OK') 
+            .select(`id, type, kitchens(name), products(name)`)
+            .neq('type', 'OK')
             .order('id', { ascending: false });
-
-        if (error) return;
 
         const list = document.getElementById('reportsList');
         list.innerHTML = "";
 
-        data.forEach((r) => {
-            const wrapper = document.createElement("div");
-            wrapper.className = "card-wrapper";
-            const deleteAction = document.createElement("div");
-            deleteAction.className = "delete-action";
-            deleteAction.innerText = "מחיקה";
-            
-            const card = document.createElement("div");
-            card.className = `card ${r.type.toLowerCase()}`;
-            card.innerHTML = `<div><div class="card-title">${r.kitchens?.name || ''}</div><div class="card-sub">${r.products?.name || ''}</div></div><div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>`;
-            
-            let startX = 0, startY = 0, currentX = 0, isScrolling = false;
-            
-            card.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-                card.style.transition = "none";
-                isScrolling = false;
-            }, {passive: true});
+        if (data) {
+            data.forEach(r => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'card-wrapper';
+                
+                const del = document.createElement('div');
+                del.className = 'delete-action';
+                del.innerText = 'מחיקה';
+                del.onclick = () => deleteReport(r.id);
 
-            card.addEventListener('touchmove', (e) => {
-                const dx = e.touches[0].clientX - startX;
-                const dy = e.touches[0].clientY - startY;
+                const card = document.createElement('div');
+                card.className = `card ${r.type.toLowerCase()}`;
+                card.innerHTML = `<div><b>${r.kitchens.name}</b><br><small>${r.products.name}</small></div>
+                                  <div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>`;
+                
+                // הוספת סלייד למחיקה
+                let startX = 0, currentX = 0;
+                card.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+                card.addEventListener('touchmove', e => {
+                    currentX = e.touches[0].clientX - startX;
+                    if (currentX < 0 && currentX > -100) card.style.transform = `translateX(${currentX}px)`;
+                });
+                card.addEventListener('touchend', () => {
+                    if (currentX < -70) {
+                        if (confirm("למחוק?")) { card.style.transform = 'translateX(-100%)'; setTimeout(()=>deleteReport(r.id), 200); }
+                        else card.style.transform = 'translateX(0)';
+                    } else card.style.transform = 'translateX(0)';
+                    currentX = 0;
+                });
 
-                if (Math.abs(dy) > Math.abs(dx)) {
-                    isScrolling = true;
-                    return;
-                }
-
-                if (!isScrolling && dx < 0 && dx > -150) {
-                    currentX = dx;
-                    card.style.transform = `translateX(${currentX}px)`;
-                }
-            }, {passive: true});
-
-            card.addEventListener('touchend', () => {
-                card.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-                if (!isScrolling && currentX < -80) {
-                    if (confirm(`למחוק את הדיווח?`)) {
-                        card.style.transform = "translateX(-100%)";
-                        setTimeout(() => deleteReport(r.id), 300);
-                    } else {
-                        card.style.transform = "translateX(0)";
-                    }
-                } else {
-                    card.style.transform = "translateX(0)";
-                }
-                currentX = 0;
+                wrapper.appendChild(del);
+                wrapper.appendChild(card);
+                list.appendChild(wrapper);
             });
-
-            deleteAction.onclick = () => confirm(`למחוק?`) && deleteReport(r.id);
-
-            wrapper.appendChild(deleteAction);
-            wrapper.appendChild(card);
-            list.appendChild(wrapper);
-        });
+        }
     }
 
-    async function loadData() {
-        let { data: ks } = await supabaseClient.from('kitchens').select('*');
-        let { data: ps } = await supabaseClient.from('products').select('*');
-        const kSelect = document.getElementById('kitchen');
-        const pSelect = document.getElementById('product');
-        kSelect.innerHTML = ""; pSelect.innerHTML = "";
-        ks?.forEach(k => kSelect.add(new Option(k.name, k.id)));
-        ps?.forEach(p => pSelect.add(new Option(p.name, p.id)));
-    }
-
-    // Realtime - האזנה לשינויים
-    supabaseClient.channel('reports_changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
+    async function init() {
+        const { data: ks } = await supabaseClient.from('kitchens').select('*');
+        const { data: ps } = await supabaseClient.from('products').select('*');
+        const kSel = document.getElementById('kitchen');
+        const pSel = document.getElementById('product');
+        ks?.forEach(k => kSel.add(new Option(k.name, k.id)));
+        ps?.forEach(p => pSel.add(new Option(p.name, p.id)));
         loadReports();
-    }).subscribe();
+    }
 
-    window.onload = async () => { 
-        await loadData(); 
-        await loadReports(); 
-        updateUI(); 
-    };
+    init();
 </script>
 </body>
 </html>
