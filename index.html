@@ -13,7 +13,15 @@
     <meta name="mobile-web-app-capable" content="yes">
 
     <style>
-        body { margin:0; font-family:-apple-system, system-ui, sans-serif; background:#f2f2f7; user-select: none; overflow-x: hidden; }
+        body { 
+            margin:0; 
+            font-family:-apple-system, system-ui, sans-serif; 
+            background:#f2f2f7; 
+            user-select: none; 
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
         .header { text-align: center; padding: 40px 15px 30px; background: linear-gradient(135deg, #6a5cff, #4a3fff); color: white; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; }
         .logo-big { width: 400px; max-width: 80%; height: auto; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
         .top-bar { display:flex; justify-content:space-between; padding:15px; }
@@ -42,7 +50,9 @@
         .card { 
             background:white; position:relative; z-index:2; border-radius:20px; padding:20px; 
             display: flex; justify-content: space-between; align-items: center;
-            transition: transform 0.3s ease; touch-action: pan-x;
+            transition: transform 0.3s ease; 
+            touch-action: pan-y;
+            will-change: transform;
         }
         .card.missing { border-right:6px solid #ff3b30; }
         .card.low { border-right:6px solid #ffcc00; }
@@ -118,89 +128,99 @@
     }
 
     async function loadReports() {
-    // 1. משיכת כל הנתונים מהשרת
-    const { data, error } = await supabaseClient
-        .from('reports')
-        .select(`id, kitchen_id, product_id, type, kitchens(name), products(name)`)
-        .order('id', { ascending: false });
+        const { data, error } = await supabaseClient
+            .from('reports')
+            .select(`id, kitchen_id, product_id, type, kitchens(name), products(name)`)
+            .order('id', { ascending: false });
 
-    if (error) return;
+        if (error) return;
 
-    // 2. סינון לוגי: מוצאים את הסטטוס האחרון לכל שילוב של מטבח ומוצר
-    const latestMap = new Map();
-    data.forEach(r => {
-        const key = `${r.kitchen_id}_${r.product_id}`;
-        if (!latestMap.has(key)) {
-            latestMap.set(key, r);
-        }
-    });
+        const latestMap = new Map();
+        data.forEach(r => {
+            const key = `${r.kitchen_id}_${r.product_id}`;
+            if (!latestMap.has(key)) {
+                latestMap.set(key, r);
+            }
+        });
 
-    const list = document.getElementById('reportsList');
-    list.innerHTML = "";
+        const list = document.getElementById('reportsList');
+        list.innerHTML = "";
 
-    // 3. הצגה למשתמש
-    latestMap.forEach((r) => {
-        // מנהל לא רואה דיווחים שהסטטוס האחרון שלהם הוא "יש" (OK)
-        if (isManager && r.type === "OK") return;
+        latestMap.forEach((r) => {
+            if (isManager && r.type === "OK") return;
 
-        const wrapper = document.createElement("div");
-        wrapper.className = "card-wrapper";
+            const wrapper = document.createElement("div");
+            wrapper.className = "card-wrapper";
 
-        const deleteAction = document.createElement("div");
-        deleteAction.className = "delete-action";
-        deleteAction.innerText = "מחיקה";
+            const deleteAction = document.createElement("div");
+            deleteAction.className = "delete-action";
+            deleteAction.innerText = "מחיקה";
 
-        const card = document.createElement("div");
-        card.className = `card ${r.type.toLowerCase()}`;
-        card.innerHTML = `
-            <div>
-                <div class="card-title">${r.kitchens?.name || 'מטבח כללי'}</div>
-                <div class="card-sub">${r.products?.name || 'מוצר כללי'}</div>
-            </div>
-            <div>${r.type === 'MISSING' ? '❌' : r.type === 'LOW' ? '⚠️' : '✅'}</div>
-        `;
+            const card = document.createElement("div");
+            card.className = `card ${r.type.toLowerCase()}`;
+            card.innerHTML = `
+                <div>
+                    <div class="card-title">${r.kitchens?.name || ''}</div>
+                    <div class="card-sub">${r.products?.name || ''}</div>
+                </div>
+                <div>${r.type === 'MISSING' ? '❌' : r.type === 'LOW' ? '⚠️' : '✅'}</div>
+            `;
 
-        if (isManager) {
-            let startX = 0;
-            let currentX = 0;
+            if (isManager) {
+                let startX = 0;
+                let startY = 0;
+                let currentX = 0;
+                let isScrolling = false;
 
-            card.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX;
-                card.style.transition = "none";
-            }, {passive: true});
+                card.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                    isScrolling = false;
+                    card.style.transition = "none";
+                }, {passive: true});
 
-            card.addEventListener('touchmove', (e) => {
-                currentX = e.touches[0].clientX - startX;
-                if (currentX < 0 && currentX > -150) {
-                    card.style.transform = `translateX(${currentX}px)`;
-                }
-            }, {passive: true});
+                card.addEventListener('touchmove', (e) => {
+                    const diffX = e.touches[0].clientX - startX;
+                    const diffY = e.touches[0].clientY - startY;
 
-            card.addEventListener('touchend', () => {
-                card.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-                if (currentX < -80) {
-                    if (confirm(`למחוק את הדיווח על ${r.products?.name}?`)) {
-                        card.style.transform = "translateX(-100%)";
-                        setTimeout(() => deleteReport(r.id), 300);
+                    if (Math.abs(diffY) > Math.abs(diffX)) {
+                        isScrolling = true;
+                        return;
+                    }
+
+                    if (isScrolling) return;
+
+                    currentX = diffX;
+                    if (currentX < 0 && currentX > -150) {
+                        card.style.transform = `translateX(${currentX}px)`;
+                    }
+                }, {passive: true});
+
+                card.addEventListener('touchend', () => {
+                    card.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                    if (!isScrolling && currentX < -80) {
+                        if (confirm(`למחוק את הדיווח על ${r.products?.name}?`)) {
+                            card.style.transform = "translateX(-100%)";
+                            setTimeout(() => deleteReport(r.id), 300);
+                        } else {
+                            card.style.transform = "translateX(0)";
+                        }
                     } else {
                         card.style.transform = "translateX(0)";
                     }
-                } else {
-                    card.style.transform = "translateX(0)";
-                }
-                currentX = 0;
-            });
+                    currentX = 0;
+                });
 
-            deleteAction.onclick = () => {
-                if (confirm(`למחוק את הדיווח על ${r.products?.name}?`)) deleteReport(r.id);
-            };
-        }
+                deleteAction.onclick = () => {
+                    if (confirm(`למחוק את הדיווח על ${r.products?.name}?`)) deleteReport(r.id);
+                };
+            }
 
-        wrapper.appendChild(deleteAction);
-        wrapper.appendChild(card);
-        list.appendChild(wrapper);
-    });
-}
+            wrapper.appendChild(deleteAction);
+            wrapper.appendChild(card);
+            list.appendChild(wrapper);
+        });
+    }
 
     async function loadData() {
         const kSelect = document.getElementById('kitchen');
