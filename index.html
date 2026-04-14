@@ -90,17 +90,43 @@
         updateUI(); loadReports();
     }
 
-    async function report(type) {
-        if (isManager) return;
-        const kId = document.getElementById('kitchen').value;
-        const pId = document.getElementById('product').value;
-        const { error } = await supabaseClient.from('reports').insert([{ kitchen_id: kId, product_id: pId, type: type }]);
-        if (!error) {
-            if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-            if (window.navigator.vibrate) window.navigator.vibrate(50);
-            loadReports();
-        }
+ async function report(type) {
+    if (isManager) return;
+    
+    const kSelect = document.getElementById('kitchen');
+    const pSelect = document.getElementById('product');
+    
+    const kId = kSelect.value;
+    const pId = pSelect.value;
+    
+    // שליפת השמות הטקסטואליים עבור הפוש
+    const kitchenName = kSelect.options[kSelect.selectedIndex].text;
+    const productName = pSelect.options[pSelect.selectedIndex].text;
+    
+    const { error } = await supabaseClient.from('reports').insert([{ 
+        kitchen_id: kId, 
+        product_id: pId, 
+        type: type 
+    }]);
+
+    if (!error) {
+        // שליחת הפוש עם נתונים אמיתיים
+        // שים לב: כאן אני מניח שקראת לפונקציה ב-Supabase בשם 'push-notification'
+        await supabaseClient.functions.invoke('push-notification', {
+            body: { 
+                title: "דיווח מלאי חדש 📋",
+                message: `במטבח ${kitchenName} דווח ${type === 'MISSING' ? 'שחסר' : 'שיש מעט'} ${productName}`,
+                kitchen: kitchenName,
+                product: productName,
+                status: type
+            }
+        });
+
+        if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+        if (window.navigator.vibrate) window.navigator.vibrate(50);
+        loadReports();
     }
+}
 
     async function deleteReport(r) {
         await supabaseClient.from('reports').delete().eq('id', r.id);
