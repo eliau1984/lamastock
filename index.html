@@ -1,298 +1,143 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="LamaStock">
-<link rel="apple-touch-icon" href="https://imgur.com/F8tpXBE.png">
-
-<title>LamaStock Pro</title>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
-<style>
-body {
-  margin:0;
-  font-family:-apple-system, system-ui, sans-serif;
-  background:#f2f2f7;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.header {
-  text-align: center;
-  padding: 40px 15px 30px;
-  background: linear-gradient(135deg, #6a5cff, #4a3fff);
-  color: white;
-  border-bottom-left-radius: 30px;
-  border-bottom-right-radius: 30px;
-}
-
-.logo-big {
-  width: 400px; 
-  max-width: 80%;
-  height: auto;
-  border-radius: 25px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-
-.top-bar {
-  display:flex;
-  justify-content:space-between;
-  padding:15px;
-}
-
-.top-bar button {
-  background: white;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 12px;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-#logoutBtn { display: none; background: #ff3b30; color: white; }
-
-.container { max-width:500px; margin:auto; padding:15px; }
-
-select {
-  width:100%; padding:16px; margin-bottom:12px;
-  border-radius:16px; border: 1px solid rgba(0,0,0,0.05);
-  background:white; font-size: 16px;
-}
-
-.buttons { display:flex; gap:10px; margin-bottom: 25px; }
-.buttons button {
-  flex:1; padding:18px 10px; border-radius:20px; border:none;
-  font-weight:700; color: white; display: flex;
-  flex-direction: column; align-items: center; gap: 8px;
-}
-
-.btn-icon {
-  background: rgba(255, 255, 255, 0.3);
-  width: 38px; height: 38px; display: flex;
-  align-items: center; justify-content: center;
-  border-radius: 12px; font-size: 20px;
-}
-
-.buttons button:disabled { opacity: 0.3; filter: grayscale(1); }
-.missing-btn { background:#ff3b30; }
-.low-btn { background:#ffcc00; color:black; }
-.ok-btn { background:#34c759; }
-
-.card-wrapper {
-  position: relative; margin-bottom: 12px;
-  border-radius: 20px; background: #ff3b30;
-  overflow: hidden;
-}
-
-.swipe-bg {
-  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
-  display: flex; align-items: center;
-  justify-content: flex-start; 
-  padding-left: 25px; 
-  color: white; font-weight: 800; font-size: 18px;
-  z-index: 1;
-}
-
-.card {
-  background:white; position:relative; z-index:2;
-  border-radius:20px; padding:20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  transition: transform 0.1s ease;
-  display: flex; justify-content: space-between; align-items: center;
-}
-
-.card.missing { border-right:6px solid #ff3b30; }
-.card.low { border-right:6px solid #ffcc00; }
-.card.ok { border-right:6px solid #34c759; }
-
-.card-title { font-weight:700; font-size: 18px; }
-.card-sub { color:#8e8e93; font-size: 14px; }
-
-.delete-btn {
-  background:#1c1c1e; color:white; border:none;
-  padding:8px 15px; border-radius:12px; font-size: 12px;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LamaStock Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body { margin:0; font-family:-apple-system, system-ui, sans-serif; background:#f2f2f7; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .header { text-align: center; padding: 40px 15px 30px; background: linear-gradient(135deg, #6a5cff, #4a3fff); color: white; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; }
+        .logo-big { width: 400px; max-width: 80%; height: auto; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .top-bar { display:flex; justify-content:space-between; padding:15px; }
+        .top-bar button { background: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        #logoutBtn { display: none; background: #ff3b30; color: white; }
+        .container { max-width:500px; margin:auto; padding:15px; }
+        select { width:100%; padding:16px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.05); background:white; font-size: 16px; }
+        .buttons { display:flex; gap:10px; margin-bottom: 25px; }
+        .buttons button { flex:1; padding:18px 10px; border-radius:20px; border:none; font-weight:700; color: white; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .btn-icon { background: rgba(255, 255, 255, 0.3); width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 20px; }
+        .buttons button:disabled { opacity: 0.3; filter: grayscale(1); }
+        .missing-btn { background:#ff3b30; }
+        .low-btn { background:#ffcc00; color:black; }
+        .ok-btn { background:#34c759; }
+        .card-wrapper { position: relative; margin-bottom: 12px; border-radius: 20px; background: #ff3b30; overflow: hidden; }
+        .card { background:white; position:relative; z-index:2; border-radius:20px; padding:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .card.missing { border-right:6px solid #ff3b30; }
+        .card.low { border-right:6px solid #ffcc00; }
+        .card.ok { border-right:6px solid #34c759; }
+        .card-title { font-weight:700; font-size: 18px; }
+        .card-sub { color:#8e8e93; font-size: 14px; }
+        .delete-btn { background:#1c1c1e; color:white; border:none; padding:8px 15px; border-radius:12px; font-size: 12px; }
+    </style>
 </head>
-
 <body>
-
-<div class="header">
-  <img src="https://imgur.com/F8tpXBE.png" class="logo-big">
-</div>
-
-<div class="top-bar">
-  <button id="loginBtn" onclick="loginManager()">👤 איש משק</button>
-  <button id="logoutBtn" onclick="logoutManager()">יציאה 👋</button>
-</div>
-
-<div class="container">
-  <select id="kitchen"></select>
-  <select id="product"></select>
-
-  <div class="buttons" id="actionButtons">
-    <button class="missing-btn" onclick="report('MISSING')">
-        <span class="btn-icon">❌</span><span>חסר</span>
-    </button>
-    <button class="low-btn" onclick="report('LOW')">
-        <span class="btn-icon">⚠️</span><span>מעט</span>
-    </button>
-    <button class="ok-btn" onclick="report('OK')">
-        <span class="btn-icon">✅</span><span>יש</span>
-    </button>
-  </div>
-
-  <div id="reportsList"></div>
-</div>
+    <div class="header"><img src="https://imgur.com/F8tpXBE.png" class="logo-big"></div>
+    <div class="top-bar">
+        <button id="loginBtn" onclick="loginManager()">👤 איש משק</button>
+        <button id="logoutBtn" onclick="logoutManager()">יציאה 👋</button>
+    </div>
+    <div class="container">
+        <select id="kitchen"></select>
+        <select id="product"></select>
+        <div class="buttons" id="actionButtons">
+            <button class="missing-btn" onclick="report('MISSING')"><span class="btn-icon">❌</span><span>חסר</span></button>
+            <button class="low-btn" onclick="report('LOW')"><span class="btn-icon">⚠️</span><span>מעט</span></button>
+            <button class="ok-btn" onclick="report('OK')"><span class="btn-icon">✅</span><span>יש</span></button>
+        </div>
+        <div id="reportsList"></div>
+    </div>
 
 <script>
-  // בקשת אישור להתראות בצורה פשוטה
-  async function initNotifications() {
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      console.log("התראות מאושרות!");
-      // כאן המערכת נרשמת לקבלת הודעות
+    const SUPABASE_URL = "https://wjkqdlafwuucmpluvueu.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indqa3FkbGFmd3V1Y21wbHV2dWV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwODA0MTcsImV4cCI6MjA5MTY1NjQxN30.ZjnmAtxYl94J-scm0WDiz8J4H0Plh06mn8MV2q5Bkpc";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let isManager = false;
+    const PASSWORD = "1234";
+
+    function updateUI() {
+        document.getElementById('loginBtn').style.display = isManager ? 'none' : 'block';
+        document.getElementById('logoutBtn').style.display = isManager ? 'block' : 'none';
+        document.querySelectorAll('#actionButtons button, select').forEach(el => el.disabled = isManager);
     }
-  }
 
-  // הפעלה אוטומטית כשהדף עולה
-  window.onload = () => {
-    initNotifications();
-    loadData();
-    loadReports();
-    updateUI();
-  };
-</script>
+    function loginManager() {
+        const pass = prompt("🔐 סיסמת איש משק:");
+        if (pass === PASSWORD) {
+            isManager = true;
+            alert("👑 שלום אלי, מצב מנהל הופעל");
+            updateUI(); loadReports();
+        } else if (pass !== null) alert("❌ שגויה");
+    }
 
-<script>
-const SUPABASE_URL = "https://wjkqdlafwuucmpluvueu.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indqa3FkbGFmd3V1Y21wbHV2dWV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwODA0MTcsImV4cCI6MjA5MTY1NjQxN30.ZjnmAtxYl94J-scm0WDiz8J4H0Plh06mn8MV2q5Bkpc";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-let isManager = false;
-const PASSWORD = "1234";
-
-function updateUI() {
-    document.getElementById('loginBtn').style.display = isManager ? 'none' : 'block';
-    document.getElementById('logoutBtn').style.display = isManager ? 'block' : 'none';
-    document.querySelectorAll('#actionButtons button, select').forEach(el => el.disabled = isManager);
-}
-
-function loginManager() {
-    const pass = prompt("🔐 סיסמת איש משק:");
-    if (pass === PASSWORD) {
-        isManager = true;
-        alert("👑 שלום אלי, מצב מנהל הופעל");
+    function logoutManager() {
+        isManager = false;
         updateUI(); loadReports();
-    } else if (pass !== null) alert("❌ שגויה");
-}
+    }
 
-function logoutManager() {
-    isManager = false;
-    alert("👋 יצאת ממצב איש משק");
-    updateUI(); loadReports();
-}
-
-function enableSwipe(card, reportData) {
-    let startX = 0, currentX = 0;
-    
-    card.addEventListener("touchstart", e => {
-        if (!isManager) return;
-        startX = e.touches[0].clientX;
-        card.style.transition = "none";
-    });
-
-    card.addEventListener("touchmove", e => {
-        if (!isManager) return;
-        let dx = e.touches[0].clientX - startX;
-        if (dx > 0) {
-            e.preventDefault();
-            currentX = dx;
-            card.style.transform = `translateX(${currentX}px)`;
+    async function report(type) {
+        if (isManager) return;
+        const kId = document.getElementById('kitchen').value;
+        const pId = document.getElementById('product').value;
+        
+        const { error } = await supabaseClient.from('reports').insert([{ kitchen_id: kId, product_id: pId, type: type }]);
+        
+        if (error) {
+            console.error(error);
+            alert("שגיאה בדיווח: " + error.message);
+        } else {
+            if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+            if (window.navigator.vibrate) window.navigator.vibrate(50);
+            loadReports();
         }
-    }, { passive: false });
-
-    card.addEventListener("touchend", () => {
-        if (!isManager) return;
-        if (currentX > 150) {
-            if (confirm("למחוק דיווח זה?")) {
-                card.style.transition = "0.3s ease-out";
-                card.style.transform = "translateX(100%)";
-                setTimeout(() => deleteReport(reportData), 200);
-            } else reset();
-        } else reset();
-    });
-
-    function reset() {
-        card.style.transition = "0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28)";
-        card.style.transform = "translateX(0)";
-        currentX = 0;
     }
-}
 
-async function report(type) {
-    if (isManager) return;
-    const { error } = await supabaseClient.from('reports').insert([{ kitchen_id: kitchen.value, product_id: product.value, type }]);
-    if (error) {
-        console.error(error);
-        return alert("שגיאה בדיווח");
+    async function deleteReport(r) {
+        await supabaseClient.from('reports').delete().eq('id', r.id);
+        loadReports();
     }
-    if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-    if (window.navigator.vibrate) window.navigator.vibrate(50);
-    loadReports();
-}
 
-async function deleteReport(r) {
-    await supabaseClient.from('reports').delete().eq('id', r.id);
-    loadReports();
-}
-
-async function loadReports() {
-    const { data } = await supabaseClient.from('reports').select(`id, kitchen_id, product_id, type, kitchens(name), products(name)`).order('id', { ascending: false });
-    const latest = {};
-    data?.forEach(r => { const key = r.kitchen_id + "_" + r.product_id; if (!latest[key]) latest[key] = r; });
-
-    reportsList.innerHTML = "";
-    Object.values(latest).forEach((r) => {
-        if (isManager && r.type === "OK") return;
-        const wrapper = document.createElement("div");
-        wrapper.className = "card-wrapper";
-        wrapper.innerHTML = `<div class="swipe-bg">🗑️ מחק</div>`;
+    async function loadReports() {
+        const { data } = await supabaseClient.from('reports').select(`id, kitchen_id, product_id, type, kitchens(name), products(name)`).order('id', { ascending: false });
+        const latest = {};
+        data?.forEach(r => { const key = r.kitchen_id + "_" + r.product_id; if (!latest[key]) latest[key] = r; });
         
-        const div = document.createElement("div");
-        div.className = `card ${r.type.toLowerCase()}`;
-        div.innerHTML = `
-            <div>
-                <div class="card-title">${r.kitchens?.name || 'מטבח'}</div>
-                <div class="card-sub">${r.products?.name || 'מוצר'}</div>
-                <div class="card-status">${r.type === 'MISSING' ? 'חסר ❌' : r.type === 'LOW' ? 'מעט ⚠️' : 'יש ✅'}</div>
-            </div>
-            ${isManager ? '<button class="delete-btn">טופל ✔</button>' : ''}
-        `;
-        
-        if (isManager) div.querySelector('.delete-btn').onclick = () => confirm("למחוק?") && deleteReport(r);
-        
-        wrapper.appendChild(div);
-        reportsList.appendChild(wrapper);
-        enableSwipe(div, r);
-    });
-}
+        const list = document.getElementById('reportsList');
+        list.innerHTML = "";
+        Object.values(latest).forEach((r) => {
+            if (isManager && r.type === "OK") return;
+            const wrapper = document.createElement("div");
+            wrapper.className = "card-wrapper";
+            const div = document.createElement("div");
+            div.className = `card ${r.type.toLowerCase()}`;
+            div.innerHTML = `<div><div class="card-title">${r.kitchens?.name || 'מטבח'}</div><div class="card-sub">${r.products?.name || 'מוצר'}</div><div class="card-status">${r.type === 'MISSING' ? 'חסר ❌' : r.type === 'LOW' ? 'מעט ⚠️' : 'יש ✅'}</div></div>${isManager ? '<button class="delete-btn">טופל ✔</button>' : ''}`;
+            if (isManager) div.querySelector('.delete-btn').onclick = () => confirm("למחוק?") && deleteReport(r);
+            wrapper.appendChild(div);
+            list.appendChild(wrapper);
+        });
+    }
 
-async function loadData() {
-    let { data: ks } = await supabaseClient.from('kitchens').select('*');
-    let { data: ps } = await supabaseClient.from('products').select('*');
-    ks?.forEach(k => kitchen.add(new Option(k.name, k.id)));
-    ps?.forEach(p => product.add(new Option(p.name, p.id)));
-}
+    async function loadData() {
+        // איפוס רשימות כדי למנוע כפילויות
+        const kSelect = document.getElementById('kitchen');
+        const pSelect = document.getElementById('product');
+        kSelect.innerHTML = "";
+        pSelect.innerHTML = "";
 
-loadData(); loadReports(); updateUI();
+        let { data: ks } = await supabaseClient.from('kitchens').select('*');
+        let { data: ps } = await supabaseClient.from('products').select('*');
+        ks?.forEach(k => kSelect.add(new Option(k.name, k.id)));
+        ps?.forEach(p => pSelect.add(new Option(p.name, p.id)));
+    }
+
+    // הפעלה אחת מסודרת בטעינה
+    window.onload = async () => { 
+        await loadData(); 
+        await loadReports(); 
+        updateUI(); 
+    };
 </script>
-
 </body>
 </html>
