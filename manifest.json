@@ -3,17 +3,17 @@
   "name": "LamaStock Pro",
   "icons": [
     {
-      "src": "https://imgur.com/F8tpXBE.png",
+      "src": "logo.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://imgur.com/F8tpXBE.png",
+      "src": "logo.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ],
-  "start_url": ".",
+  "start_url": "./index.html",
   "display": "standalone",
   "theme_color": "#6a5cff",
   "background_color": "#f2f2f7"
