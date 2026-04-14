@@ -167,14 +167,20 @@ select {
   const app = initializeApp(firebaseConfig);
   const messaging = getMessaging(app);
 
-  // פונקציה לבקשת אישור וקבלת טוקן
+  // פונקציה לבקשת אישור ורישום לערוץ הודעות
   window.setupNotifications = function() {
       Notification.requestPermission().then((permission) => {
           if (permission === 'granted') {
               getToken(messaging, { vapidKey: 'BIktZj4cOPnqC2WkWdT-1dGpgXmmL0rZSPhiU0TZhPA3D-uKidczEKrmP00gdl9OWqv6xMeejkLJURzj5EvSKrg' })
               .then((currentToken) => {
                   if (currentToken) {
-                      console.log("Token למכשיר:", currentToken);
+                      console.log("Token:", currentToken);
+                      
+                      // השורה הקריטית: מחברת את הטלפון לערוץ 'all' שבו Supabase משתמש
+                      fetch(`https://iid.googleapis.com/iid/v1/${currentToken}/rel/topics/all`, {
+                          method: 'POST',
+                          headers: { 'Authorization': 'key=AIzaSyDM5PzSA3VDEX5DTGuF7Lzv_Zc_C29l0f0' }
+                      }).then(() => console.log("נרשם לערוץ ההתראות בהצלחה!"));
                   }
               });
           }
@@ -182,10 +188,10 @@ select {
   }
 
   onMessage(messaging, (payload) => {
-      alert(`התראה: ${payload.notification.title}\n${payload.notification.body}`);
+      // מקפיץ התראה בתוך האפליקציה אם היא פתוחה
+      alert(`עדכון מלאי: ${payload.notification.body}`);
   });
 
-  // קריאה ראשונית לבקשת אישור
   setupNotifications();
 </script>
 
