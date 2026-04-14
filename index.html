@@ -22,7 +22,7 @@
         .missing-btn { background:#ff3b30; }
         .low-btn { background:#ffcc00; color:black; }
         .ok-btn { background:#34c759; }
-        .card-wrapper { position: relative; margin-bottom: 12px; border-radius: 20px; background: #ff3b30; overflow: hidden; }
+        .card-wrapper { position: relative; margin-bottom: 12px; border-radius: 20px; overflow: hidden; }
         .card { background:white; position:relative; z-index:2; border-radius:20px; padding:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .card.missing { border-right:6px solid #ff3b30; }
         .card.low { border-right:6px solid #ffcc00; }
@@ -67,7 +67,6 @@
         const pass = prompt("🔐 סיסמת איש משק:");
         if (pass === PASSWORD) {
             isManager = true;
-            alert("👑 שלום אלי, מצב מנהל הופעל");
             updateUI(); loadReports();
         } else if (pass !== null) alert("❌ שגויה");
     }
@@ -85,8 +84,7 @@
         const { error } = await supabaseClient.from('reports').insert([{ kitchen_id: kId, product_id: pId, type: type }]);
         
         if (error) {
-            console.error(error);
-            alert("שגיאה בדיווח: " + error.message);
+            alert("שגיאה בדיווח");
         } else {
             if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
             if (window.navigator.vibrate) window.navigator.vibrate(50);
@@ -119,8 +117,10 @@
         });
     }
 
+    let dataLoaded = false; // דגל למניעת טעינה כפולה
     async function loadData() {
-        // איפוס רשימות כדי למנוע כפילויות
+        if (dataLoaded) return; // אם כבר טענו, אל תטען שוב
+        
         const kSelect = document.getElementById('kitchen');
         const pSelect = document.getElementById('product');
         kSelect.innerHTML = "";
@@ -128,11 +128,14 @@
 
         let { data: ks } = await supabaseClient.from('kitchens').select('*');
         let { data: ps } = await supabaseClient.from('products').select('*');
+        
         ks?.forEach(k => kSelect.add(new Option(k.name, k.id)));
         ps?.forEach(p => pSelect.add(new Option(p.name, p.id)));
+        
+        dataLoaded = true; // מסמן שהטעינה הסתיימה
     }
 
-    // הפעלה אחת מסודרת בטעינה
+    // הפעלה מסודרת
     window.onload = async () => { 
         await loadData(); 
         await loadReports(); 
