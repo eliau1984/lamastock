@@ -4,45 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LamaStock Pro</title>
-
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
     <link rel="icon" type="image/png" sizes="192x192" href="logo.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="logo.png">
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#6a5cff">
     <meta name="mobile-web-app-capable" content="yes">
 
-    <link rel="apple-touch-icon" href="logo.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="LamaStock">
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    
     <style>
-        /* ה-Style ששלחת נשאר בדיוק אותו דבר */
-        body { margin:0; font-family:-apple-system, system-ui, sans-serif; background:#f2f2f7; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body { margin:0; font-family:-apple-system, system-ui, sans-serif; background:#f2f2f7; user-select: none; overflow-x: hidden; }
         .header { text-align: center; padding: 40px 15px 30px; background: linear-gradient(135deg, #6a5cff, #4a3fff); color: white; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; }
         .logo-big { width: 400px; max-width: 80%; height: auto; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
         .top-bar { display:flex; justify-content:space-between; padding:15px; }
         .top-bar button { background: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         #logoutBtn { display: none; background: #ff3b30; color: white; }
         .container { max-width:500px; margin:auto; padding:15px; }
-        select { width:100%; padding:16px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 16px; appearance: none; -webkit-appearance: none; }
+        select { width:100%; padding:16px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 16px; appearance: none; }
+        
+        /* כפתורי דיווח */
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
-        .buttons button { flex:1; padding:18px 10px; border-radius:20px; border:none; font-weight:700; color: white; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .buttons button { flex:1; padding:18px 10px; border-radius:20px; border:none; font-weight:700; color: white; display: flex; flex-direction: column; align-items: center; gap: 8px; transition: transform 0.1s; }
+        .buttons button:active { transform: scale(0.95); }
         .btn-icon { background: rgba(255, 255, 255, 0.3); width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 20px; }
-        .buttons button:disabled { opacity: 0.3; filter: grayscale(1); }
         .missing-btn { background:#ff3b30; }
         .low-btn { background:#ffcc00; color:black; }
         .ok-btn { background:#34c759; }
-        .card-wrapper { position: relative; margin-bottom: 12px; border-radius: 20px; overflow: hidden; }
-        .card { background:white; position:relative; z-index:2; border-radius:20px; padding:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+
+        /* כרטיסיות דיווחים עם סלייד */
+        .card-wrapper { position: relative; margin-bottom: 12px; border-radius: 20px; background: #ff3b30; overflow: hidden; }
+        .card { 
+            background:white; position:relative; z-index:2; border-radius:20px; padding:20px; 
+            display: flex; justify-content: space-between; align-items: center;
+            transition: transform 0.3s ease; touch-action: pan-x;
+        }
         .card.missing { border-right:6px solid #ff3b30; }
         .card.low { border-right:6px solid #ffcc00; }
         .card.ok { border-right:6px solid #34c759; }
+        .delete-action { 
+            position: absolute; right: 0; top: 0; bottom: 0; width: 100px; 
+            background: #ff3b30; color: white; display: flex; align-items: center; 
+            justify-content: center; font-weight: 700; font-size: 14px; z-index: 1;
+        }
         .card-title { font-weight:700; font-size: 18px; }
         .card-sub { color:#8e8e93; font-size: 14px; }
-        .delete-btn { background:#1c1c1e; color:white; border:none; padding:8px 15px; border-radius:12px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -52,9 +57,8 @@
         <button id="logoutBtn" onclick="logoutManager()">יציאה 👋</button>
     </div>
     <div class="container">
-        <select id="kitchen"><option disabled selected>טוען מטבחים...</option></select>
-        <select id="product"><option disabled selected>טוען מוצרים...</option></select>
-        
+        <select id="kitchen"></select>
+        <select id="product"></select>
         <div class="buttons" id="actionButtons">
             <button class="missing-btn" onclick="report('MISSING')"><span class="btn-icon">❌</span><span>חסר</span></button>
             <button class="low-btn" onclick="report('LOW')"><span class="btn-icon">⚠️</span><span>מעט</span></button>
@@ -90,134 +94,83 @@
         updateUI(); loadReports();
     }
 
- async function report(type) {
-    if (isManager) return;
-    
-    const kSelect = document.getElementById('kitchen');
-    const pSelect = document.getElementById('product');
-    
-    const kId = kSelect.value;
-    const pId = pSelect.value;
-    
-    // שליפת השמות הטקסטואליים עבור הפוש
-    const kitchenName = kSelect.options[kSelect.selectedIndex].text;
-    const productName = pSelect.options[pSelect.selectedIndex].text;
-    
-    const { error } = await supabaseClient.from('reports').insert([{ 
-        kitchen_id: kId, 
-        product_id: pId, 
-        type: type 
-    }]);
-
-    if (!error) {
-        // שליחת הפוש עם נתונים אמיתיים
-        // שים לב: כאן אני מניח שקראת לפונקציה ב-Supabase בשם 'push-notification'
-        await supabaseClient.functions.invoke('push-notification', {
-            body: { 
-                title: "דיווח מלאי חדש 📋",
-                message: `במטבח ${kitchenName} דווח ${type === 'MISSING' ? 'שחסר' : 'שיש מעט'} ${productName}`,
-                kitchen: kitchenName,
-                product: productName,
-                status: type
-            }
-        });
-
-        if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-        if (window.navigator.vibrate) window.navigator.vibrate(50);
-        loadReports();
+    async function report(type) {
+        if (isManager) return;
+        const kId = document.getElementById('kitchen').value;
+        const pId = document.getElementById('product').value;
+        
+        const { error } = await supabaseClient.from('reports').insert([{ kitchen_id: kId, product_id: pId, type: type }]);
+        
+        if (!error) {
+            if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+            if (window.navigator.vibrate) window.navigator.vibrate(50);
+            
+            // ריענון מיידי של הרשימה
+            setTimeout(loadReports, 500); 
+        }
     }
-}
 
-    async function deleteReport(r) {
-        await supabaseClient.from('reports').delete().eq('id', r.id);
+    async function deleteReport(id) {
+        await supabaseClient.from('reports').delete().eq('id', id);
         loadReports();
     }
 
     async function loadReports() {
         const { data } = await supabaseClient.from('reports').select(`id, kitchen_id, product_id, type, kitchens(name), products(name)`).order('id', { ascending: false });
         const latest = {};
-        data?.forEach(r => { 
-            const key = r.kitchen_id + "_" + r.product_id; 
-            if (!latest[key]) latest[key] = r; 
-        });
+        data?.forEach(r => { const key = r.kitchen_id + "_" + r.product_id; if (!latest[key]) latest[key] = r; });
         
         const list = document.getElementById('reportsList');
         list.innerHTML = "";
+        
         Object.values(latest).forEach((r) => {
-            // הכלל החדש: אם אתה מנהל - אל תציג שורות ירוקות (OK). 
-            // אם אתה מדווח (איש משק) - תציג הכל כדי שיראה שהדיווח עבר.
             if (isManager && r.type === "OK") return;
             
             const wrapper = document.createElement("div");
             wrapper.className = "card-wrapper";
-            const div = document.createElement("div");
-            div.className = `card ${r.type.toLowerCase()}`;
             
-            let statusLabel = "";
-            if (r.type === 'MISSING') statusLabel = 'חסר ❌';
-            else if (r.type === 'LOW') statusLabel = 'מעט ⚠️';
-            else statusLabel = 'יש ✅';
-
-            div.innerHTML = `
-                <div>
-                    <div class="card-title">${r.kitchens?.name || 'מטבח'}</div>
-                    <div class="card-sub">${r.products?.name || 'מוצר'}</div>
-                    <div class="card-status">${statusLabel}</div>
-                </div>
-                ${isManager ? '<button class="delete-btn">טופל ✔</button>' : ''}
-            `;
+            const deleteAction = document.createElement("div");
+            deleteAction.className = "delete-action";
+            deleteAction.innerText = "מחיקה";
             
+            const card = document.createElement("div");
+            card.className = `card ${r.type.toLowerCase()}`;
+            card.innerHTML = `<div><div class="card-title">${r.kitchens?.name || ''}</div><div class="card-sub">${r.products?.name || ''}</div></div><div>${r.type === 'MISSING' ? '❌' : r.type === 'LOW' ? '⚠️' : '✅'}</div>`;
+            
+            // לוגיקה של סלייד (רק למנהל)
             if (isManager) {
-                div.querySelector('.delete-btn').onclick = () => confirm("למחוק דיווח?") && deleteReport(r);
+                let startX = 0;
+                card.addEventListener('touchstart', (e) => startX = e.touches[0].clientX);
+                card.addEventListener('touchmove', (e) => {
+                    let moveX = e.touches[0].clientX - startX;
+                    if (moveX < -50) card.style.transform = "translateX(-100px)";
+                    if (moveX > 20) card.style.transform = "translateX(0)";
+                });
+                deleteAction.onclick = () => deleteReport(r.id);
             }
-            
-            wrapper.appendChild(div);
+
+            wrapper.appendChild(deleteAction);
+            wrapper.appendChild(card);
             list.appendChild(wrapper);
         });
     }
 
-    let isFetching = false;
     async function loadData() {
-        if (isFetching) return;
-        isFetching = true;
-
         const kSelect = document.getElementById('kitchen');
         const pSelect = document.getElementById('product');
-        
-        // איפוס מוחלט של הרשימות
-        kSelect.innerHTML = "";
-        pSelect.innerHTML = "";
-
-        try {
-            let { data: ks } = await supabaseClient.from('kitchens').select('*');
-            let { data: ps } = await supabaseClient.from('products').select('*');
-            
-            ks?.forEach(k => {
-                let opt = document.createElement('option');
-                opt.value = k.id;
-                opt.textContent = k.name;
-                kSelect.appendChild(opt);
-            });
-
-            ps?.forEach(p => {
-                let opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.name;
-                pSelect.appendChild(opt);
-            });
-        } catch (e) {
-            console.error("Load error:", e);
-        } finally {
-            isFetching = false;
-        }
+        kSelect.innerHTML = ""; pSelect.innerHTML = "";
+        let { data: ks } = await supabaseClient.from('kitchens').select('*');
+        let { data: ps } = await supabaseClient.from('products').select('*');
+        ks?.forEach(k => kSelect.add(new Option(k.name, k.id)));
+        ps?.forEach(p => pSelect.add(new Option(p.name, p.id)));
     }
 
-    // הפעלה אחת בלבד בטעינה ראשונית
-    window.addEventListener('DOMContentLoaded', () => {
-        loadData();
-        loadReports();
-        updateUI();
-    });
+    window.onload = async () => { 
+        await loadData(); 
+        await loadReports(); 
+        updateUI(); 
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+    };
 </script>
 </body>
 </html>
