@@ -167,20 +167,17 @@ select {
   const app = initializeApp(firebaseConfig);
   const messaging = getMessaging(app);
 
-  // פונקציה לבקשת אישור ורישום לערוץ הודעות
   window.setupNotifications = function() {
       Notification.requestPermission().then((permission) => {
           if (permission === 'granted') {
-              getToken(messaging, { vapidKey: 'BIktZj4cOPnqC2WkWdT-1dGpgXmmL0rZSPhiU0TZhPA3D-uKidczEKrmP00gdl9OWqv6xMeejkLJURzj5EvSKrg' })
+              getToken(messaging, { vapidKey: 'BIktZj4cOPnqC2WkWdT-1dGpgXmmL0ZSPhiU0TZhPA3D-uKidczEKrmP00gdl9OWqv6xMeejkLJURzj5EvSKrg' })
               .then((currentToken) => {
                   if (currentToken) {
-                      console.log("Token:", currentToken);
-                      
-                      // השורה הקריטית: מחברת את הטלפון לערוץ 'all' שבו Supabase משתמש
+                      console.log("נרשם להתראות בהצלחה");
                       fetch(`https://iid.googleapis.com/iid/v1/${currentToken}/rel/topics/all`, {
                           method: 'POST',
                           headers: { 'Authorization': 'key=AIzaSyDM5PzSA3VDEX5DTGuF7Lzv_Zc_C29l0f0' }
-                      }).then(() => console.log("נרשם לערוץ ההתראות בהצלחה!"));
+                      });
                   }
               });
           }
@@ -188,7 +185,6 @@ select {
   }
 
   onMessage(messaging, (payload) => {
-      // מקפיץ התראה בתוך האפליקציה אם היא פתוחה
       alert(`עדכון מלאי: ${payload.notification.body}`);
   });
 
@@ -264,7 +260,10 @@ function enableSwipe(card, reportData) {
 async function report(type) {
     if (isManager) return;
     const { error } = await supabaseClient.from('reports').insert([{ kitchen_id: kitchen.value, product_id: product.value, type }]);
-    if (error) return alert("שגיאה");
+    if (error) {
+        console.error(error);
+        return alert("שגיאה בדיווח");
+    }
     if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
     if (window.navigator.vibrate) window.navigator.vibrate(50);
     loadReports();
