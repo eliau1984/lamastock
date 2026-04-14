@@ -138,22 +138,50 @@
             card.innerHTML = `<div><div class="card-title">${r.kitchens?.name || ''}</div><div class="card-sub">${r.products?.name || ''}</div></div><div>${r.type === 'MISSING' ? '❌' : r.type === 'LOW' ? '⚠️' : '✅'}</div>`;
             
             // לוגיקה של סלייד (רק למנהל)
+         // לוגיקה של סלייד (רק למנהל)
             if (isManager) {
                 let startX = 0;
-                card.addEventListener('touchstart', (e) => startX = e.touches[0].clientX);
-                card.addEventListener('touchmove', (e) => {
-                    let moveX = e.touches[0].clientX - startX;
-                    if (moveX < -50) card.style.transform = "translateX(-100px)";
-                    if (moveX > 20) card.style.transform = "translateX(0)";
-                });
-                deleteAction.onclick = () => deleteReport(r.id);
-            }
+                let currentX = 0;
+                let isMoving = false;
 
-            wrapper.appendChild(deleteAction);
-            wrapper.appendChild(card);
-            list.appendChild(wrapper);
-        });
-    }
+                card.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    isMoving = true;
+                    card.style.transition = "none"; // ביטול אנימציה בזמן גרירה
+                }, {passive: true});
+
+                card.addEventListener('touchmove', (e) => {
+                    if (!isMoving) return;
+                    currentX = e.touches[0].clientX - startX;
+                    
+                    // מאפשר גרירה רק שמאלה ורק עד גבול מסוים (100 פיקסלים)
+                    if (currentX < 0 && currentX > -150) {
+                        card.style.transform = `translateX(${currentX}px)`;
+                    }
+                }, {passive: true});
+
+                card.addEventListener('touchend', () => {
+                    isMoving = false;
+                    card.style.transition = "transform 0.3s ease";
+                    
+                    // אם גררנו מספיק רחוק (מעל 70 פיקסלים), תישאר פתוח
+                    if (currentX < -70) {
+                        card.style.transform = "translateX(-100px)";
+                    } else {
+                        card.style.transform = "translateX(0)";
+                    }
+                    currentX = 0;
+                });
+
+                // תיקון פונקציית המחיקה - לחיצה על הרקע האדום
+                deleteAction.onclick = async () => {
+                    if (confirm("למחוק דיווח?")) {
+                        await deleteReport(r.id);
+                    } else {
+                        card.style.transform = "translateX(0)";
+                    }
+                };
+            }
 
     async function loadData() {
         const kSelect = document.getElementById('kitchen');
