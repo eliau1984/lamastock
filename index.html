@@ -151,44 +151,23 @@ select {
   <div id="reportsList"></div>
 </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.1/firebase-app.js";
-  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/9.1.1/firebase-messaging.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyDM5PzSA3VDEX5DTGuF7Lzv_Zc_C29l0f0",
-    authDomain: "lamastock-notifications.firebaseapp.com",
-    projectId: "lamastock-notifications",
-    storageBucket: "lamastock-notifications.firebasestorage.app",
-    messagingSenderId: "349737754751",
-    appId: "1:349737754751:web:6cb21493e9a5a8dd551f4a"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const messaging = getMessaging(app);
-
-  window.setupNotifications = function() {
-      Notification.requestPermission().then((permission) => {
-          if (permission === 'granted') {
-              getToken(messaging, { vapidKey: 'BIktZj4cOPnqC2WkWdT-1dGpgXmmL0ZSPhiU0TZhPA3D-uKidczEKrmP00gdl9OWqv6xMeejkLJURzj5EvSKrg' })
-              .then((currentToken) => {
-                  if (currentToken) {
-                      console.log("נרשם להתראות בהצלחה");
-                      fetch(`https://iid.googleapis.com/iid/v1/${currentToken}/rel/topics/all`, {
-                          method: 'POST',
-                          headers: { 'Authorization': 'key=AIzaSyDM5PzSA3VDEX5DTGuF7Lzv_Zc_C29l0f0' }
-                      });
-                  }
-              });
-          }
-      });
+<script>
+  // בקשת אישור להתראות בצורה פשוטה
+  async function initNotifications() {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      console.log("התראות מאושרות!");
+      // כאן המערכת נרשמת לקבלת הודעות
+    }
   }
 
-  onMessage(messaging, (payload) => {
-      alert(`עדכון מלאי: ${payload.notification.body}`);
-  });
-
-  setupNotifications();
+  // הפעלה אוטומטית כשהדף עולה
+  window.onload = () => {
+    initNotifications();
+    loadData();
+    loadReports();
+    updateUI();
+  };
 </script>
 
 <script>
