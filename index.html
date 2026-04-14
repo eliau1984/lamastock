@@ -23,7 +23,6 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* HEADER */
 .header {
   text-align: center;
   padding: 40px 15px 30px;
@@ -66,7 +65,6 @@ select {
   background:white; font-size: 16px;
 }
 
-/* BUTTONS */
 .buttons { display:flex; gap:10px; margin-bottom: 25px; }
 .buttons button {
   flex:1; padding:18px 10px; border-radius:20px; border:none;
@@ -86,7 +84,6 @@ select {
 .low-btn { background:#ffcc00; color:black; }
 .ok-btn { background:#34c759; }
 
-/* SWIPE - התיקון הסופי לצד שמאל */
 .card-wrapper {
   position: relative; margin-bottom: 12px;
   border-radius: 20px; background: #ff3b30;
@@ -96,8 +93,8 @@ select {
 .swipe-bg {
   position: absolute; top: 0; right: 0; bottom: 0; left: 0;
   display: flex; align-items: center;
-  justify-content: flex-start; /* תוכן בשמאל */
-  padding-right: 25px; /* מרווח מהדופן השמאלית במצב RTL */
+  justify-content: flex-start; 
+  padding-left: 25px; 
   color: white; font-weight: 800; font-size: 18px;
   z-index: 1;
 }
@@ -153,6 +150,44 @@ select {
 
   <div id="reportsList"></div>
 </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.1/firebase-app.js";
+  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/9.1.1/firebase-messaging.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDM5PzSA3VDEX5DTGuF7Lzv_Zc_C29l0f0",
+    authDomain: "lamastock-notifications.firebaseapp.com",
+    projectId: "lamastock-notifications",
+    storageBucket: "lamastock-notifications.firebasestorage.app",
+    messagingSenderId: "349737754751",
+    appId: "1:349737754751:web:6cb21493e9a5a8dd551f4a"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
+
+  // פונקציה לבקשת אישור וקבלת טוקן
+  window.setupNotifications = function() {
+      Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+              getToken(messaging, { vapidKey: 'BIktZj4cOPnqC2WkWdT-1dGpgXmmL0rZSPhiU0TZhPA3D-uKidczEKrmP00gdl9OWqv6xMeejkLJURzj5EvSKrg' })
+              .then((currentToken) => {
+                  if (currentToken) {
+                      console.log("Token למכשיר:", currentToken);
+                  }
+              });
+          }
+      });
+  }
+
+  onMessage(messaging, (payload) => {
+      alert(`התראה: ${payload.notification.title}\n${payload.notification.body}`);
+  });
+
+  // קריאה ראשונית לבקשת אישור
+  setupNotifications();
+</script>
 
 <script>
 const SUPABASE_URL = "https://wjkqdlafwuucmpluvueu.supabase.co";
