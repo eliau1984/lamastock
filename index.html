@@ -21,7 +21,6 @@
         #logoutBtn { display: none; background: #ff3b30; color: white; }
         .container { max-width:500px; margin:auto; padding:15px; }
         select { width:100%; padding:16px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 16px; appearance: none; }
-        
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
         .buttons button { flex:1; padding:18px 10px; border-radius:20px; border:none; font-weight:700; color: white; display: flex; flex-direction: column; align-items: center; gap: 8px; transition: transform 0.1s; }
         .buttons button:active { transform: scale(0.95); }
@@ -29,21 +28,12 @@
         .missing-btn { background:#ff3b30; }
         .low-btn { background:#ffcc00; color:black; }
         .ok-btn { background:#34c759; }
-
         .card-wrapper { position: relative; margin-bottom: 12px; border-radius: 20px; background: #ff3b30; overflow: hidden; }
-        .card { 
-            background:white; position:relative; z-index:2; border-radius:20px; padding:20px; 
-            display: flex; justify-content: space-between; align-items: center;
-            transition: transform 0.3s ease; touch-action: pan-x;
-        }
+        .card { background:white; position:relative; z-index:2; border-radius:20px; padding:20px; display: flex; justify-content: space-between; align-items: center; transition: transform 0.3s ease; touch-action: pan-x; }
         .card.missing { border-right:6px solid #ff3b30; }
         .card.low { border-right:6px solid #ffcc00; }
         .card.ok { border-right:6px solid #34c759; }
-        .delete-action { 
-            position: absolute; right: 0; top: 0; bottom: 0; width: 100px; 
-            background: #ff3b30; color: white; display: flex; align-items: center; 
-            justify-content: center; font-weight: 700; font-size: 16px; z-index: 1;
-        }
+        .delete-action { position: absolute; right: 0; top: 0; bottom: 0; width: 100px; background: #ff3b30; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; z-index: 1; }
         .card-title { font-weight:700; font-size: 18px; }
         .card-sub { color:#8e8e93; font-size: 14px; }
     </style>
