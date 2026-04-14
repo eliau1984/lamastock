@@ -14,13 +14,8 @@
 
     <style>
         body { 
-            margin:0; 
-            font-family:-apple-system, system-ui, sans-serif; 
-            background:#f2f2f7; 
-            user-select: none; 
-            overflow-x: hidden;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            margin:0; font-family:-apple-system, system-ui, sans-serif; background:#f2f2f7; 
+            user-select: none; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch;
         }
         .header { text-align: center; padding: 40px 15px 30px; background: linear-gradient(135deg, #6a5cff, #4a3fff); color: white; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; }
         .logo-big { width: 400px; max-width: 80%; height: auto; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
@@ -32,14 +27,7 @@
         
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
         .buttons button { flex:1; padding:18px 10px; border-radius:20px; border:none; font-weight:700; color: white; display: flex; flex-direction: column; align-items: center; gap: 8px; transition: transform 0.1s; }
-        
-        .buttons button:disabled {
-            opacity: 0.5;
-            filter: grayscale(0.8);
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
+        .buttons button:disabled { opacity: 0.5; filter: grayscale(0.8); cursor: not-allowed; transform: none !important; }
         .buttons button:active { transform: scale(0.95); }
         .btn-icon { background: rgba(255, 255, 255, 0.3); width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 20px; }
         .missing-btn { background:#ff3b30; }
@@ -50,13 +38,10 @@
         .card { 
             background:white; position:relative; z-index:2; border-radius:20px; padding:20px; 
             display: flex; justify-content: space-between; align-items: center;
-            transition: transform 0.3s ease; 
-            touch-action: pan-y;
-            will-change: transform;
+            transition: transform 0.3s ease; touch-action: pan-y; will-change: transform;
         }
         .card.missing { border-right:6px solid #ff3b30; }
         .card.low { border-right:6px solid #ffcc00; }
-        .card.ok { border-right:6px solid #34c759; }
         .delete-action { 
             position: absolute; right: 0; top: 0; bottom: 0; width: 100px; 
             background: #ff3b30; color: white; display: flex; align-items: center; 
@@ -99,142 +84,91 @@
 
     function loginManager() {
         const pass = prompt("🔐 סיסמת איש משק:");
-        if (pass === PASSWORD) {
-            isManager = true;
-            updateUI(); loadReports();
-        } else if (pass !== null) alert("❌ שגויה");
+        if (pass === PASSWORD) { isManager = true; updateUI(); loadReports(); }
     }
 
-    function logoutManager() {
-        isManager = false;
-        updateUI(); loadReports();
-    }
+    function logoutManager() { isManager = false; updateUI(); loadReports(); }
 
     async function report(type) {
-    if (isManager) return;
-    const kId = document.getElementById('kitchen').value;
-    const pId = document.getElementById('product').value;
-    
-    // Upsert: מחפש אם כבר יש דיווח למטבח+מוצר הזה ומעדכן, או יוצר חדש
-    const { error } = await supabaseClient
-        .from('reports')
-        .upsert(
-            { kitchen_id: kId, product_id: pId, type: type }, 
-            { onConflict: 'kitchen_id,product_id' } // דורש הגדרת Unique Constraint ב-Supabase
+        if (isManager) return;
+        const kId = document.getElementById('kitchen').value;
+        const pId = document.getElementById('product').value;
+        
+        // UPSERT: מעדכן שורה קיימת או יוצר חדשה (מבוסס על ה-Constraint ב-DB)
+        const { error } = await supabaseClient.from('reports').upsert(
+            { kitchen_id: kId, product_id: pId, type: type },
+            { onConflict: 'kitchen_id,product_id' }
         );
-    
-    if (!error) {
-        if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-        if (window.navigator.vibrate) window.navigator.vibrate(50);
-        setTimeout(loadReports, 300); 
+        
+        if (!error) {
+            if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+            setTimeout(loadReports, 300); 
+        }
     }
-}
 
-    async function deleteReport(report) {
-    // מוחק את כל הדיווחים אי פעם של המוצר הזה במטבח הספציפי הזה
-    const { error } = await supabaseClient
-        .from('reports')
-        .eq('kitchen_id', report.kitchen_id)
-        .eq('product_id', report.product_id);
-    
-    if (!error) {
+    async function deleteReport(id) {
+        await supabaseClient.from('reports').delete().eq('id', id);
         loadReports();
     }
-}
 
     async function loadReports() {
-    const { data, error } = await supabaseClient
-        .from('reports')
-        .select(`id, kitchen_id, product_id, type, kitchens(name), products(name)`)
-        .order('id', { ascending: false });
+        const { data, error } = await supabaseClient.from('reports')
+            .select(`id, type, kitchens(name), products(name)`)
+            .neq('type', 'OK') // לא מציגים מוצרים תקינים ברשימה
+            .order('id', { ascending: false });
 
-    if (error) return;
+        if (error) return;
 
-    const list = document.getElementById('reportsList');
-    list.innerHTML = "";
+        const list = document.getElementById('reportsList');
+        list.innerHTML = "";
 
-    data.forEach((r) => {
-        // אף אחד לא רואה ירוקים (OK) ברשימה למטה. ירוק פשוט "מנקה" את השורה.
-        if (r.type === "OK") return;
+        data.forEach((r) => {
+            const wrapper = document.createElement("div");
+            wrapper.className = "card-wrapper";
+            const deleteAction = document.createElement("div");
+            deleteAction.className = "delete-action";
+            deleteAction.innerText = "מחיקה";
+            
+            const card = document.createElement("div");
+            card.className = `card ${r.type.toLowerCase()}`;
+            card.innerHTML = `<div><div class="card-title">${r.kitchens?.name || ''}</div><div class="card-sub">${r.products?.name || ''}</div></div><div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>`;
+            
+            // סלייד למחיקה - זמין למנהל ולמדווח
+            let startX = 0, startY = 0, currentX = 0, isScrolling = false;
+            card.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; card.style.transition = "none"; }, {passive: true});
+            card.addEventListener('touchmove', (e) => {
+                const dx = e.touches[0].clientX - startX;
+                const dy = e.touches[0].clientY - startY;
+                if (Math.abs(dy) > Math.abs(dx)) { isScrolling = true; return; }
+                if (!isScrolling && dx < 0 && dx > -150) { currentX = dx; card.style.transform = `translateX(${currentX}px)`; }
+            }, {passive: true});
+            card.addEventListener('touchend', () => {
+                card.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                if (!isScrolling && currentX < -80) {
+                    if (confirm(`למחוק את הדיווח על ${r.products?.name}?`)) { card.style.transform = "translateX(-100%)"; setTimeout(() => deleteReport(r.id), 300); }
+                    else card.style.transform = "translateX(0)";
+                } else card.style.transform = "translateX(0)";
+                currentX = 0;
+            });
 
-        const wrapper = document.createElement("div");
-        wrapper.className = "card-wrapper";
+            deleteAction.onclick = () => confirm(`למחוק את הדיווח?`) && deleteReport(r.id);
 
-        const deleteAction = document.createElement("div");
-        deleteAction.className = "delete-action";
-        deleteAction.innerText = "מחיקה";
-
-        const card = document.createElement("div");
-        card.className = `card ${r.type.toLowerCase()}`;
-        card.innerHTML = `
-            <div>
-                <div class="card-title">${r.kitchens?.name || ''}</div>
-                <div class="card-sub">${r.products?.name || ''}</div>
-            </div>
-            <div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>
-        `;
-
-        // לוגיקת סלייד למחיקה (עכשיו זמינה לכולם - גם לאיש משק וגם למנהל)
-        let startX = 0;
-        let currentX = 0;
-        let isScrolling = false;
-
-        card.addEventListener('touchstart', (e) => {
-            startX = e.touches[0].clientX;
-            card.style.transition = "none";
-        }, {passive: true});
-
-        card.addEventListener('touchmove', (e) => {
-            const diffX = e.touches[0].clientX - startX;
-            if (Math.abs(diffX) > 10) {
-                currentX = diffX;
-                if (currentX < 0 && currentX > -150) {
-                    card.style.transform = `translateX(${currentX}px)`;
-                }
-            }
-        }, {passive: true});
-
-        card.addEventListener('touchend', () => {
-            card.style.transition = "transform 0.3s ease";
-            if (currentX < -80) {
-                if (confirm(`למחוק את הדיווח?`)) {
-                    card.style.transform = "translateX(-100%)";
-                    setTimeout(() => deleteReport(r.id), 300);
-                } else {
-                    card.style.transform = "translateX(0)";
-                }
-            } else {
-                card.style.transform = "translateX(0)";
-            }
-            currentX = 0;
+            wrapper.appendChild(deleteAction);
+            wrapper.appendChild(card);
+            list.appendChild(wrapper);
         });
-
-        deleteAction.onclick = () => {
-            if (confirm(`למחוק?`)) deleteReport(r.id);
-        };
-
-        wrapper.appendChild(deleteAction);
-        wrapper.appendChild(card);
-        list.appendChild(wrapper);
-    });
-}
+    }
 
     async function loadData() {
         const kSelect = document.getElementById('kitchen');
         const pSelect = document.getElementById('product');
-        kSelect.innerHTML = ""; pSelect.innerHTML = "";
         let { data: ks } = await supabaseClient.from('kitchens').select('*');
         let { data: ps } = await supabaseClient.from('products').select('*');
         ks?.forEach(k => kSelect.add(new Option(k.name, k.id)));
         ps?.forEach(p => pSelect.add(new Option(p.name, p.id)));
     }
 
-    window.onload = async () => { 
-        await loadData(); 
-        await loadReports(); 
-        updateUI(); 
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
-    };
+    window.onload = async () => { await loadData(); await loadReports(); updateUI(); };
 </script>
 </body>
 </html>
