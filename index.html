@@ -14,7 +14,7 @@
         .top-bar button { background: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         #logoutBtn { display: none; background: #ff3b30; color: white; }
         .container { max-width:500px; margin:auto; padding:15px; }
-        select { width:100%; padding:16px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.05); background:white; font-size: 16px; }
+        select { width:100%; padding:16px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 16px; appearance: none; -webkit-appearance: none; }
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
         .buttons button { flex:1; padding:18px 10px; border-radius:20px; border:none; font-weight:700; color: white; display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .btn-icon { background: rgba(255, 255, 255, 0.3); width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 20px; }
@@ -39,8 +39,9 @@
         <button id="logoutBtn" onclick="logoutManager()">יציאה 👋</button>
     </div>
     <div class="container">
-        <select id="kitchen"></select>
-        <select id="product"></select>
+        <select id="kitchen"><option disabled selected>טוען מטבחים...</option></select>
+        <select id="product"><option disabled selected>טוען מוצרים...</option></select>
+        
         <div class="buttons" id="actionButtons">
             <button class="missing-btn" onclick="report('MISSING')"><span class="btn-icon">❌</span><span>חסר</span></button>
             <button class="low-btn" onclick="report('LOW')"><span class="btn-icon">⚠️</span><span>מעט</span></button>
@@ -112,27 +113,48 @@
         });
     }
 
+    let isFetching = false;
     async function loadData() {
+        if (isFetching) return;
+        isFetching = true;
+
         const kSelect = document.getElementById('kitchen');
         const pSelect = document.getElementById('product');
         
-        // ניקוי יסודי לפני טעינה
+        // איפוס מוחלט של הרשימות
         kSelect.innerHTML = "";
         pSelect.innerHTML = "";
 
-        let { data: ks } = await supabaseClient.from('kitchens').select('*');
-        let { data: ps } = await supabaseClient.from('products').select('*');
-        
-        ks?.forEach(k => kSelect.add(new Option(k.name, k.id)));
-        ps?.forEach(p => pSelect.add(new Option(p.name, p.id)));
+        try {
+            let { data: ks } = await supabaseClient.from('kitchens').select('*');
+            let { data: ps } = await supabaseClient.from('products').select('*');
+            
+            ks?.forEach(k => {
+                let opt = document.createElement('option');
+                opt.value = k.id;
+                opt.textContent = k.name;
+                kSelect.appendChild(opt);
+            });
+
+            ps?.forEach(p => {
+                let opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                pSelect.appendChild(opt);
+            });
+        } catch (e) {
+            console.error("Load error:", e);
+        } finally {
+            isFetching = false;
+        }
     }
 
-    // הפעלה אחת בלבד!
-    window.onload = async () => { 
-        await loadData(); 
-        await loadReports(); 
-        updateUI(); 
-    };
+    // הפעלה אחת בלבד בטעינה ראשונית
+    window.addEventListener('DOMContentLoaded', () => {
+        loadData();
+        loadReports();
+        updateUI();
+    });
 </script>
 </body>
 </html>
