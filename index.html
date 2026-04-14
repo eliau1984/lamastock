@@ -94,7 +94,6 @@
         const kId = document.getElementById('kitchen').value;
         const pId = document.getElementById('product').value;
         
-        // UPSERT: מעדכן שורה קיימת או יוצר חדשה (מבוסס על ה-Constraint ב-DB)
         const { error } = await supabaseClient.from('reports').upsert(
             { kitchen_id: kId, product_id: pId, type: type },
             { onConflict: 'kitchen_id,product_id' }
@@ -114,7 +113,7 @@
     async function loadReports() {
         const { data, error } = await supabaseClient.from('reports')
             .select(`id, type, kitchens(name), products(name)`)
-            .neq('type', 'OK') // לא מציגים מוצרים תקינים ברשימה
+            .neq('type', 'OK') 
             .order('id', { ascending: false });
 
         if (error) return;
@@ -133,19 +132,36 @@
             card.className = `card ${r.type.toLowerCase()}`;
             card.innerHTML = `<div><div class="card-title">${r.kitchens?.name || ''}</div><div class="card-sub">${r.products?.name || ''}</div></div><div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>`;
             
-            // סלייד למחיקה - זמין למנהל ולמדווח
             let startX = 0, startY = 0, currentX = 0, isScrolling = false;
-            card.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; card.style.transition = "none"; }, {passive: true});
+            card.addEventListener('touchstart', (e) => { 
+                startX = e.touches[0].clientX; 
+                startY = e.touches[0].clientY; 
+                card.style.transition = "none"; 
+            }, {passive: true});
+
             card.addEventListener('touchmove', (e) => {
                 const dx = e.touches[0].clientX - startX;
                 const dy = e.touches[0].clientY - startY;
-                if (Math.abs(dy) > Math.abs(dx)) { isScrolling = true; return; }
-                if (!isScrolling && dx < 0 && dx > -150) { currentX = dx; card.style.transform = `translateX(${currentX}px)`; }
+                
+                // אם הגלילה היא אנכית (למעלה/למטה), אל תפעיל את הסלייד
+                if (Math.abs(dy) > Math.abs(dx)) { 
+                    isScrolling = true; 
+                    return; 
+                }
+                
+                if (!isScrolling && dx < 0 && dx > -150) { 
+                    currentX = dx; 
+                    card.style.transform = `translateX(${currentX}px)`; 
+                }
             }, {passive: true});
+
             card.addEventListener('touchend', () => {
                 card.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
                 if (!isScrolling && currentX < -80) {
-                    if (confirm(`למחוק את הדיווח על ${r.products?.name}?`)) { card.style.transform = "translateX(-100%)"; setTimeout(() => deleteReport(r.id), 300); }
+                    if (confirm(`למחוק את הדיווח על ${r.products?.name}?`)) { 
+                        card.style.transform = "translateX(-100%)"; 
+                        setTimeout(() => deleteReport(r.id), 300); 
+                    }
                     else card.style.transform = "translateX(0)";
                 } else card.style.transform = "translateX(0)";
                 currentX = 0;
@@ -168,7 +184,12 @@
         ps?.forEach(p => pSelect.add(new Option(p.name, p.id)));
     }
 
-    window.onload = async () => { await loadData(); await loadReports(); updateUI(); };
+    window.onload = async () => { 
+        await loadData(); 
+        await loadReports(); 
+        updateUI(); 
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+    };
 </script>
 </body>
 </html>
