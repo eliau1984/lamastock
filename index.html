@@ -9,14 +9,14 @@
     <style>
         body { margin:0; font-family:-apple-system, system-ui, sans-serif; background:#f2f2f7; user-select: none; overflow-x: hidden; }
         .header { text-align: center; padding: 25px; background: linear-gradient(135deg, #6a5cff, #4a3fff); border-bottom-left-radius: 25px; border-bottom-right-radius: 25px; }
-        .logo-big { width: 350px; max-width: 85%; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .logo-big { width: 350px; max-width: 85%; border-radius: 20px; }
         .top-bar { display:flex; justify-content:space-between; padding:15px; }
         .top-bar button { background: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         #logoutBtn { display: none; background: #ff3b30; color: white; }
         .container { max-width:500px; margin:auto; padding:15px; }
-        select { width:100%; padding:18px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 18px; font-weight: 700; text-align: center; appearance: none; }
+        select { width:100%; padding:18px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 18px; font-weight: 700; text-align: center; }
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
-        .buttons button { flex:1; height: 110px; border-radius:22px; border:none; font-weight:800; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 18px; transition: transform 0.1s; }
+        .buttons button { flex:1; height: 110px; border-radius:22px; border:none; font-weight:800; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 18px; }
         .missing-btn { background:#ff3b30; }
         .low-btn { background:#ffcc00; color: #000 !important; }
         .ok-btn { background:#34c759; }
@@ -72,12 +72,12 @@
         );
         if (!error) {
             if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-            // קריאה ישירה לפונקציית הפוש לגיבוי
+            // שליחת פוש ישירה דרך ה-API (עוקף את ה-Trigger של ה-DB)
             fetch(`${SUPABASE_URL}/functions/v1/push-notification`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
                 body: JSON.stringify({ record: { kitchen_id: kId, product_id: pId, type: type } })
-            }).catch(e => console.log("Push failed, but DB updated"));
+            }).catch(() => {});
             loadReports();
         }
     }
@@ -95,10 +95,12 @@
         data?.forEach(r => {
             const wrapper = document.createElement("div");
             wrapper.className = "card-wrapper";
+            
             const card = document.createElement("div");
             card.className = `card ${r.type.toLowerCase()}`;
             card.innerHTML = `<div><b>${r.kitchens?.name || ''}</b><br>${r.products?.name || ''}</div><div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>`;
             
+            // הגנה: רק אם מנהל מחובר נוצר כפתור מחיקה וסלייד
             if (isManager) {
                 const del = document.createElement("div");
                 del.className = "delete-action"; del.innerText = "מחיקה";
@@ -106,17 +108,18 @@
                 wrapper.appendChild(del);
 
                 let startX = 0, currentX = 0;
-                card.addEventListener('touchstart', e => startX = e.touches[0].clientX, {passive: true});
+                card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; card.style.transition = "none"; }, {passive: true});
                 card.addEventListener('touchmove', e => {
                     currentX = e.touches[0].clientX - startX;
                     if (currentX < 0 && currentX > -100) card.style.transform = `translateX(${currentX}px)`;
                 }, {passive: true});
                 card.addEventListener('touchend', () => {
+                    card.style.transition = "transform 0.3s ease";
                     if (currentX < -70) { if (confirm("למחוק?")) deleteReport(r.id); else card.style.transform = 'translateX(0)'; }
                     else card.style.transform = 'translateX(0)';
-                    currentX = 0;
                 });
             }
+            
             wrapper.appendChild(card);
             list.appendChild(wrapper);
         });
@@ -132,7 +135,6 @@
         loadReports();
     }
     init();
-    supabaseClient.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => loadReports()).subscribe();
 </script>
 </body>
 </html>
