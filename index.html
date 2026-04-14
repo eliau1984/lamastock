@@ -111,116 +111,113 @@
     }
 
     async function report(type) {
-        if (isManager) return;
-        const kId = document.getElementById('kitchen').value;
-        const pId = document.getElementById('product').value;
-        const { error } = await supabaseClient.from('reports').insert([{ kitchen_id: kId, product_id: pId, type: type }]);
-        if (!error) {
-            if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-            if (window.navigator.vibrate) window.navigator.vibrate(50);
-            setTimeout(loadReports, 500); 
-        }
+    if (isManager) return;
+    const kId = document.getElementById('kitchen').value;
+    const pId = document.getElementById('product').value;
+    
+    // Upsert: מחפש אם כבר יש דיווח למטבח+מוצר הזה ומעדכן, או יוצר חדש
+    const { error } = await supabaseClient
+        .from('reports')
+        .upsert(
+            { kitchen_id: kId, product_id: pId, type: type }, 
+            { onConflict: 'kitchen_id,product_id' } // דורש הגדרת Unique Constraint ב-Supabase
+        );
+    
+    if (!error) {
+        if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+        if (window.navigator.vibrate) window.navigator.vibrate(50);
+        setTimeout(loadReports, 300); 
     }
+}
 
-    async function deleteReport(id) {
-        await supabaseClient.from('reports').delete().eq('id', id);
+    async function deleteReport(report) {
+    // מוחק את כל הדיווחים אי פעם של המוצר הזה במטבח הספציפי הזה
+    const { error } = await supabaseClient
+        .from('reports')
+        .eq('kitchen_id', report.kitchen_id)
+        .eq('product_id', report.product_id);
+    
+    if (!error) {
         loadReports();
     }
+}
 
     async function loadReports() {
-        const { data, error } = await supabaseClient
-            .from('reports')
-            .select(`id, kitchen_id, product_id, type, kitchens(name), products(name)`)
-            .order('id', { ascending: false });
+    const { data, error } = await supabaseClient
+        .from('reports')
+        .select(`id, kitchen_id, product_id, type, kitchens(name), products(name)`)
+        .order('id', { ascending: false });
 
-        if (error) return;
+    if (error) return;
 
-        const latestMap = new Map();
-        data.forEach(r => {
-            const key = `${r.kitchen_id}_${r.product_id}`;
-            if (!latestMap.has(key)) {
-                latestMap.set(key, r);
+    const list = document.getElementById('reportsList');
+    list.innerHTML = "";
+
+    data.forEach((r) => {
+        // אף אחד לא רואה ירוקים (OK) ברשימה למטה. ירוק פשוט "מנקה" את השורה.
+        if (r.type === "OK") return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "card-wrapper";
+
+        const deleteAction = document.createElement("div");
+        deleteAction.className = "delete-action";
+        deleteAction.innerText = "מחיקה";
+
+        const card = document.createElement("div");
+        card.className = `card ${r.type.toLowerCase()}`;
+        card.innerHTML = `
+            <div>
+                <div class="card-title">${r.kitchens?.name || ''}</div>
+                <div class="card-sub">${r.products?.name || ''}</div>
+            </div>
+            <div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>
+        `;
+
+        // לוגיקת סלייד למחיקה (עכשיו זמינה לכולם - גם לאיש משק וגם למנהל)
+        let startX = 0;
+        let currentX = 0;
+        let isScrolling = false;
+
+        card.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            card.style.transition = "none";
+        }, {passive: true});
+
+        card.addEventListener('touchmove', (e) => {
+            const diffX = e.touches[0].clientX - startX;
+            if (Math.abs(diffX) > 10) {
+                currentX = diffX;
+                if (currentX < 0 && currentX > -150) {
+                    card.style.transform = `translateX(${currentX}px)`;
+                }
             }
+        }, {passive: true});
+
+        card.addEventListener('touchend', () => {
+            card.style.transition = "transform 0.3s ease";
+            if (currentX < -80) {
+                if (confirm(`למחוק את הדיווח?`)) {
+                    card.style.transform = "translateX(-100%)";
+                    setTimeout(() => deleteReport(r.id), 300);
+                } else {
+                    card.style.transform = "translateX(0)";
+                }
+            } else {
+                card.style.transform = "translateX(0)";
+            }
+            currentX = 0;
         });
 
-        const list = document.getElementById('reportsList');
-        list.innerHTML = "";
+        deleteAction.onclick = () => {
+            if (confirm(`למחוק?`)) deleteReport(r.id);
+        };
 
-        latestMap.forEach((r) => {
-            if (isManager && r.type === "OK") return;
-
-            const wrapper = document.createElement("div");
-            wrapper.className = "card-wrapper";
-
-            const deleteAction = document.createElement("div");
-            deleteAction.className = "delete-action";
-            deleteAction.innerText = "מחיקה";
-
-            const card = document.createElement("div");
-            card.className = `card ${r.type.toLowerCase()}`;
-            card.innerHTML = `
-                <div>
-                    <div class="card-title">${r.kitchens?.name || ''}</div>
-                    <div class="card-sub">${r.products?.name || ''}</div>
-                </div>
-                <div>${r.type === 'MISSING' ? '❌' : r.type === 'LOW' ? '⚠️' : '✅'}</div>
-            `;
-
-            if (isManager) {
-                let startX = 0;
-                let startY = 0;
-                let currentX = 0;
-                let isScrolling = false;
-
-                card.addEventListener('touchstart', (e) => {
-                    startX = e.touches[0].clientX;
-                    startY = e.touches[0].clientY;
-                    isScrolling = false;
-                    card.style.transition = "none";
-                }, {passive: true});
-
-                card.addEventListener('touchmove', (e) => {
-                    const diffX = e.touches[0].clientX - startX;
-                    const diffY = e.touches[0].clientY - startY;
-
-                    if (Math.abs(diffY) > Math.abs(diffX)) {
-                        isScrolling = true;
-                        return;
-                    }
-
-                    if (isScrolling) return;
-
-                    currentX = diffX;
-                    if (currentX < 0 && currentX > -150) {
-                        card.style.transform = `translateX(${currentX}px)`;
-                    }
-                }, {passive: true});
-
-                card.addEventListener('touchend', () => {
-                    card.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-                    if (!isScrolling && currentX < -80) {
-                        if (confirm(`למחוק את הדיווח על ${r.products?.name}?`)) {
-                            card.style.transform = "translateX(-100%)";
-                            setTimeout(() => deleteReport(r.id), 300);
-                        } else {
-                            card.style.transform = "translateX(0)";
-                        }
-                    } else {
-                        card.style.transform = "translateX(0)";
-                    }
-                    currentX = 0;
-                });
-
-                deleteAction.onclick = () => {
-                    if (confirm(`למחוק את הדיווח על ${r.products?.name}?`)) deleteReport(r.id);
-                };
-            }
-
-            wrapper.appendChild(deleteAction);
-            wrapper.appendChild(card);
-            list.appendChild(wrapper);
-        });
-    }
+        wrapper.appendChild(deleteAction);
+        wrapper.appendChild(card);
+        list.appendChild(wrapper);
+    });
+}
 
     async function loadData() {
         const kSelect = document.getElementById('kitchen');
