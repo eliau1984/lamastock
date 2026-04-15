@@ -82,22 +82,32 @@
         alert("יצאת ממצב איש משק. מצב מדווח פעיל 👋");
     }
 
-    async function report(type) {
-        if (isManager) return;
-        const kId = document.getElementById('kitchen').value;
-        const pId = document.getElementById('product').value;
-        const { error } = await supabaseClient.from('reports').upsert({ kitchen_id: parseInt(kId), product_id: parseInt(pId), type: type }, { onConflict: 'kitchen_id,product_id' });
-        if (!error) {
-            if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-            fetch(`${SUPABASE_URL}/functions/v1/smooth-worker`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
-                body: JSON.stringify({ record: { kitchen_id: kId, product_id: pId, type: type } })
-            }).catch(() => {});
-            loadReports();
+        async function report(type) {
+            if (isManager) return;
+            const kId = document.getElementById('kitchen').value;
+            const pId = document.getElementById('product').value;
+            
+            // 1. עדכון ה-DB
+            const { error } = await supabaseClient.from('reports').upsert(
+                { kitchen_id: parseInt(kId), product_id: parseInt(pId), type: type },
+                { onConflict: 'kitchen_id,product_id' }
+            );
+            
+            if (!error) {
+                if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+                
+                // 2. קריאה לפונקציה - הורדתי את ה-Authorization כדי לבדוק אם זה מה שחוסם
+                fetch(`${SUPABASE_URL}/functions/v1/smooth-worker`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ record: { kitchen_id: kId, product_id: pId, type: type } })
+                })
+                .then(response => console.log("Fetch sent, status:", response.status))
+                .catch(err => console.error("Fetch error:", err));
+                
+                loadReports();
+            }
         }
-    }
-
     async function deleteReport(id) {
         if (!isManager) return;
         await supabaseClient.from('reports').delete().eq('id', id);
