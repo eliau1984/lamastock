@@ -9,14 +9,16 @@
     <style>
         body { margin:0; font-family:-apple-system, system-ui, sans-serif; background:#f2f2f7; user-select: none; overflow-x: hidden; }
         .header { text-align: center; padding: 25px; background: linear-gradient(135deg, #6a5cff, #4a3fff); border-bottom-left-radius: 25px; border-bottom-right-radius: 25px; }
-        .logo-big { width: 350px; max-width: 85%; border-radius: 20px; }
+        .logo-big { width: 350px; max-width: 85%; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .top-bar { display:flex; justify-content:space-between; padding:15px; }
         .top-bar button { background: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         #logoutBtn { display: none; background: #ff3b30; color: white; }
         .container { max-width:500px; margin:auto; padding:15px; }
-        select { width:100%; padding:18px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 18px; font-weight: 700; text-align: center; }
+        select { width:100%; padding:18px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 18px; font-weight: 700; text-align: center; appearance: none; }
+        select:disabled { background: #e5e5ea; color: #8e8e93; }
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
-        .buttons button { flex:1; height: 110px; border-radius:22px; border:none; font-weight:800; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 18px; }
+        .buttons button { flex:1; height: 110px; border-radius:22px; border:none; font-weight:800; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 18px; transition: transform 0.1s; }
+        .buttons button:disabled { opacity: 0.5; filter: grayscale(1); transform: none; }
         .missing-btn { background:#ff3b30; }
         .low-btn { background:#ffcc00; color: #000 !important; }
         .ok-btn { background:#34c759; }
@@ -53,58 +55,79 @@
     function updateUI() {
         document.getElementById('loginBtn').style.display = isManager ? 'none' : 'block';
         document.getElementById('logoutBtn').style.display = isManager ? 'block' : 'none';
-        document.querySelectorAll('#actionButtons button, select').forEach(el => el.disabled = isManager);
+        
+        // חסימה פיזית של הכפתורים והסלקטים
+        const elements = document.querySelectorAll('#actionButtons button, #kitchen, #product');
+        elements.forEach(el => {
+            el.disabled = isManager;
+        });
     }
 
     async function loginManager() {
-        if (prompt("סיסמה:") === "1234") { isManager = true; updateUI(); loadReports(); }
+        const pass = prompt("🔐 סיסמת איש משק:");
+        if (pass === "1234") {
+            isManager = true;
+            updateUI();
+            loadReports();
+            alert("ברוך הבא, מצב עריכה פעיל ✅");
+        } else if (pass !== null) {
+            alert("❌ סיסמה שגויה! הגישה נדחתה.");
+        }
     }
 
-    function logoutManager() { isManager = false; updateUI(); loadReports(); }
+    function logoutManager() {
+        isManager = false;
+        updateUI();
+        loadReports();
+        alert("יצאת ממצב איש משק. מצב מדווח פעיל 👋");
+    }
 
     async function report(type) {
-        if (isManager) return;
+        if (isManager) return; // הגנה נוספת ברמת הקוד
         const kId = document.getElementById('kitchen').value;
         const pId = document.getElementById('product').value;
+        
         const { error } = await supabaseClient.from('reports').upsert(
             { kitchen_id: parseInt(kId), product_id: parseInt(pId), type: type },
             { onConflict: 'kitchen_id,product_id' }
         );
+        
         if (!error) {
             if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-            // שליחת פוש ישירה דרך ה-API (עוקף את ה-Trigger של ה-DB)
+            
+            // קריאה ישירה לפונקציית הפושים
             fetch(`${SUPABASE_URL}/functions/v1/push-notification`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
                 body: JSON.stringify({ record: { kitchen_id: kId, product_id: pId, type: type } })
-            }).catch(() => {});
+            }).catch(e => console.log("Push trigger failure"));
+            
             loadReports();
         }
     }
 
     async function deleteReport(id) {
         if (!isManager) return;
-        await supabaseClient.from('reports').delete().eq('id', id);
-        loadReports();
+        const { error } = await supabaseClient.from('reports').delete().eq('id', id);
+        if (!error) loadReports();
     }
 
     async function loadReports() {
         const { data } = await supabaseClient.from('reports').select('id, type, kitchens(name), products(name)').neq('type', 'OK').order('id', { ascending: false });
         const list = document.getElementById('reportsList');
         list.innerHTML = "";
+        
         data?.forEach(r => {
             const wrapper = document.createElement("div");
             wrapper.className = "card-wrapper";
-            
             const card = document.createElement("div");
             card.className = `card ${r.type.toLowerCase()}`;
             card.innerHTML = `<div><b>${r.kitchens?.name || ''}</b><br>${r.products?.name || ''}</div><div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>`;
             
-            // הגנה: רק אם מנהל מחובר נוצר כפתור מחיקה וסלייד
             if (isManager) {
                 const del = document.createElement("div");
                 del.className = "delete-action"; del.innerText = "מחיקה";
-                del.onclick = () => deleteReport(r.id);
+                del.onclick = () => { if(confirm("למחוק דיווח זה?")) deleteReport(r.id); };
                 wrapper.appendChild(del);
 
                 let startX = 0, currentX = 0;
@@ -117,9 +140,9 @@
                     card.style.transition = "transform 0.3s ease";
                     if (currentX < -70) { if (confirm("למחוק?")) deleteReport(r.id); else card.style.transform = 'translateX(0)'; }
                     else card.style.transform = 'translateX(0)';
+                    currentX = 0;
                 });
             }
-            
             wrapper.appendChild(card);
             list.appendChild(wrapper);
         });
