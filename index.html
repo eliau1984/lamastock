@@ -14,30 +14,30 @@
         .top-bar button { background: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; }
         #logoutBtn { display: none; background: #ff3b30; color: white; }
         .container { max-width:500px; margin:auto; padding:15px; }
-        
         select { width:100%; padding:18px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 18px; font-weight: 700; text-align: center; appearance: none; color: #000; }
         select:disabled { background: #e5e5ea; color: #8e8e93; opacity: 1; }
-        
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
         .buttons button { flex:1; height: 110px; border-radius:22px; border:none; font-weight:800; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 18px; }
-        
-        /* צבעים שמרשימים גם במצב disabled */
         .missing-btn { background:#ff3b30 !important; color: white !important; }
         .low-btn { background:#ffcc00 !important; color: black !important; }
         .ok-btn { background:#34c759 !important; color: white !important; }
-        
         .buttons button:disabled { cursor: default; opacity: 1; }
-
-        .card-wrapper { position: relative; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
-        .card { background:white; position:relative; z-index:2; border-radius:20px; padding:20px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.3s ease; }
+        
+        /* מבנה הדיווחים - מותאם לסליידר */
+        .card-wrapper { position: relative; margin-bottom: 12px; display: flex; align-items: center; justify-content: flex-end; background: #4a3fff; border-radius: 20px; overflow: hidden; }
+        .card { background:white; position:relative; z-index:2; border-radius:20px; padding:20px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.3s ease; box-sizing: border-box; }
         .card.missing { border-right:8px solid #ff3b30; }
         .card.low { border-right:8px solid #ffcc00; }
         
-        /* כפתור מחיקה חדש - מופרד ונקי בצד ימין */
-        .delete-btn-pc { display: none; background: #4a3fff; color: white; border: none; padding: 10px 12px; border-radius: 15px; font-weight: bold; cursor: pointer; z-index: 10; font-size: 14px; white-space: nowrap; }
-        .is-manager .delete-btn-pc { display: block; }
+        /* כפתור מחיקה - מוסתר מתחת לכרטיס */
+        .delete-action-slide { position: absolute; right: 0; top: 0; bottom: 0; width: 100px; background: #4a3fff; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; z-index: 1; }
         
-        .delete-action-slide { position: absolute; left: 0; top: 0; bottom: 0; width: 100px; background: #4a3fff; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; z-index: 1; border-radius: 20px 0 0 20px; }
+        /* כפתור מחיקה למחשב - מופיע רק כשיש מקום */
+        .delete-btn-pc { display: none; background: #4a3fff; color: white; border: none; padding: 10px 14px; border-radius: 12px; font-weight: bold; cursor: pointer; margin-left: 10px; white-space: nowrap; }
+        @media (min-width: 600px) {
+            .is-manager .delete-btn-pc { display: block; }
+            .card-wrapper { background: transparent; overflow: visible; }
+        }
     </style>
 </head>
 <body>
@@ -56,7 +56,6 @@
         </div>
         <div id="reportsList"></div>
     </div>
-
 <script>
     const SUPABASE_URL = "https://wjkqdlafwuucmpluvueu.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indqa3FkbGFmd3V1Y21wbHV2dWV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwODA0MTcsImV4cCI6MjA5MTY1NjQxN30.ZjnmAtxYl94J-scm0WDiz8J4H0Plh06mn8MV2q5Bkpc";
@@ -73,19 +72,13 @@
     async function loginManager() {
         const pass = prompt("🔐 סיסמת איש משק:");
         if (pass === "1234") {
-            isManager = true;
-            updateUI();
-            loadReports();
+            isManager = true; updateUI(); loadReports();
             alert("ברוך הבא, מצב עריכה פעיל ✅");
-        } else if (pass !== null) {
-            alert("❌ סיסמה שגויה! הגישה נדחתה.");
-        }
+        } else if (pass !== null) { alert("❌ סיסמה שגויה! הגישה נדחתה."); }
     }
 
     function logoutManager() {
-        isManager = false;
-        updateUI();
-        loadReports();
+        isManager = false; updateUI(); loadReports();
         alert("יצאת ממצב איש משק. מצב מדווח פעיל 👋");
     }
 
@@ -93,13 +86,10 @@
         if (isManager) return;
         const kId = document.getElementById('kitchen').value;
         const pId = document.getElementById('product').value;
-        const { error } = await supabaseClient.from('reports').upsert(
-            { kitchen_id: parseInt(kId), product_id: parseInt(pId), type: type },
-            { onConflict: 'kitchen_id,product_id' }
-        );
+        const { error } = await supabaseClient.from('reports').upsert({ kitchen_id: parseInt(kId), product_id: parseInt(pId), type: type }, { onConflict: 'kitchen_id,product_id' });
         if (!error) {
             if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-            fetch(`${SUPABASE_URL}/functions/v1/push-notification`, {
+            fetch(`${SUPABASE_URL}/functions/v1/smooth-worker`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
                 body: JSON.stringify({ record: { kitchen_id: kId, product_id: pId, type: type } })
@@ -122,13 +112,11 @@
             const wrapper = document.createElement("div");
             wrapper.className = "card-wrapper";
             
-            // כפתור מחיקה חדש מימין (במקום בתוך הכרטיס)
+            // כפתור רקע לסליידר (נייד)
             if (isManager) {
-                const pcDel = document.createElement("button");
-                pcDel.className = "delete-btn-pc";
-                pcDel.innerText = "מחיקה";
-                pcDel.onclick = () => { if(confirm("למחוק דיווח זה?")) deleteReport(r.id); };
-                wrapper.appendChild(pcDel);
+                const slideDel = document.createElement("div");
+                slideDel.className = "delete-action-slide"; slideDel.innerText = "מחיקה";
+                wrapper.appendChild(slideDel);
             }
 
             const card = document.createElement("div");
@@ -136,24 +124,30 @@
             card.innerHTML = `<div><b>${r.kitchens?.name || ''}</b><br>${r.products?.name || ''}</div><div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>`;
             
             if (isManager) {
-                const slideDel = document.createElement("div");
-                slideDel.className = "delete-action-slide"; slideDel.innerText = "מחיקה";
-                wrapper.appendChild(slideDel);
-
+                // לוגיקת סליידר מתוקנת
                 let startX = 0, currentX = 0;
                 card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; card.style.transition = "none"; }, {passive: true});
                 card.addEventListener('touchmove', e => {
                     currentX = e.touches[0].clientX - startX;
-                    // החלקה שמאלה (כי הכפתור נמצא ב-left: 0)
-                    if (currentX > 0 && currentX < 100) card.style.transform = `translateX(${currentX}px)`;
+                    // החלקה שמאלה (ערך שלילי) חושפת את הצד הימני
+                    if (currentX < 0 && currentX > -100) card.style.transform = `translateX(${currentX}px)`;
                 }, {passive: true});
                 card.addEventListener('touchend', () => {
                     card.style.transition = "transform 0.3s ease";
-                    if (currentX > 70) { if (confirm("למחוק?")) deleteReport(r.id); else card.style.transform = 'translateX(0)'; }
-                    else card.style.transform = 'translateX(0)';
+                    if (currentX < -70) { 
+                        if (confirm("למחוק דיווח זה?")) deleteReport(r.id); 
+                        else card.style.transform = 'translateX(0)'; 
+                    } else card.style.transform = 'translateX(0)';
                     currentX = 0;
                 });
+
+                // כפתור למחשב
+                const pcDel = document.createElement("button");
+                pcDel.className = "delete-btn-pc"; pcDel.innerText = "מחיקה";
+                pcDel.onclick = () => { if(confirm("למחוק?")) deleteReport(r.id); };
+                wrapper.appendChild(pcDel);
             }
+            
             wrapper.appendChild(card);
             list.appendChild(wrapper);
         });
