@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LamaStock Pro</title>
+    <title>LamaStock Pro v4</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -11,25 +11,31 @@
         .header { text-align: center; padding: 25px; background: linear-gradient(135deg, #6a5cff, #4a3fff); border-bottom-left-radius: 25px; border-bottom-right-radius: 25px; }
         .logo-big { width: 350px; max-width: 85%; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .top-bar { display:flex; justify-content:space-between; padding:15px; }
-        .top-bar button { background: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .top-bar button { background: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; }
         #logoutBtn { display: none; background: #ff3b30; color: white; }
         .container { max-width:500px; margin:auto; padding:15px; }
         select { width:100%; padding:18px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 18px; font-weight: 700; text-align: center; appearance: none; }
-        select:disabled { background: #e5e5ea; color: #8e8e93; }
+        select:disabled { background: #e5e5ea; color: #8e8e93; opacity: 1; }
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
-        .buttons button { flex:1; height: 110px; border-radius:22px; border:none; font-weight:800; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 18px; transition: transform 0.1s; }
-        .buttons button:disabled { opacity: 0.5; filter: grayscale(1); transform: none; }
+        .buttons button { flex:1; height: 110px; border-radius:22px; border:none; font-weight:800; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 18px; cursor: pointer; }
+        .buttons button:disabled { opacity: 0.5; filter: grayscale(1); cursor: not-allowed; }
         .missing-btn { background:#ff3b30; }
         .low-btn { background:#ffcc00; color: #000 !important; }
         .ok-btn { background:#34c759; }
-        .card-wrapper { position: relative; margin-bottom: 12px; border-radius: 20px; background: #ff3b30; overflow: hidden; }
-        .card { background:white; position:relative; z-index:2; border-radius:20px; padding:20px; display: flex; justify-content: space-between; align-items: center; transition: transform 0.3s ease; }
+        
+        .card-wrapper { position: relative; margin-bottom: 12px; border-radius: 20px; background: #ff3b30; overflow: hidden; display: flex; align-items: center; }
+        .card { background:white; position:relative; z-index:2; border-radius:20px; padding:20px; display: flex; justify-content: space-between; align-items: center; width: 100%; transition: transform 0.3s ease; }
         .card.missing { border-right:8px solid #ff3b30; }
         .card.low { border-right:8px solid #ffcc00; }
+        
+        /* כפתור מחיקה ייעודי למחשב */
+        .pc-delete-btn { display: none; background: #ff3b30; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-weight: bold; cursor: pointer; margin-left: 10px; z-index: 10; }
+        .is-manager .pc-delete-btn { display: flex; align-items: center; justify-content: center; }
+
         .delete-action { position: absolute; right: 0; top: 0; bottom: 0; width: 100px; background: #ff3b30; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; z-index: 1; }
     </style>
 </head>
-<body>
+<body id="mainBody">
     <div class="header"><img src="https://imgur.com/F8tpXBE.png" class="logo-big"></div>
     <div class="top-bar">
         <button id="loginBtn" onclick="loginManager()">👤 איש משק</button>
@@ -55,12 +61,10 @@
     function updateUI() {
         document.getElementById('loginBtn').style.display = isManager ? 'none' : 'block';
         document.getElementById('logoutBtn').style.display = isManager ? 'block' : 'none';
+        document.body.classList.toggle('is-manager', isManager);
         
-        // חסימה פיזית של הכפתורים והסלקטים
         const elements = document.querySelectorAll('#actionButtons button, #kitchen, #product');
-        elements.forEach(el => {
-            el.disabled = isManager;
-        });
+        elements.forEach(el => el.disabled = isManager);
     }
 
     async function loginManager() {
@@ -69,9 +73,9 @@
             isManager = true;
             updateUI();
             loadReports();
-            alert("ברוך הבא, מצב עריכה פעיל ✅");
+            alert("מצב איש משק פעיל - ניתן למחוק בסלייד או בכפתור X");
         } else if (pass !== null) {
-            alert("❌ סיסמה שגויה! הגישה נדחתה.");
+            alert("❌ סיסמה שגויה!");
         }
     }
 
@@ -79,29 +83,25 @@
         isManager = false;
         updateUI();
         loadReports();
-        alert("יצאת ממצב איש משק. מצב מדווח פעיל 👋");
+        alert("חזרה למצב מדווח");
     }
 
     async function report(type) {
-        if (isManager) return; // הגנה נוספת ברמת הקוד
+        if (isManager) return;
         const kId = document.getElementById('kitchen').value;
         const pId = document.getElementById('product').value;
-        
         const { error } = await supabaseClient.from('reports').upsert(
             { kitchen_id: parseInt(kId), product_id: parseInt(pId), type: type },
             { onConflict: 'kitchen_id,product_id' }
         );
-        
         if (!error) {
             if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-            
-            // קריאה ישירה לפונקציית הפושים
+            // שליחת פוש
             fetch(`${SUPABASE_URL}/functions/v1/push-notification`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
                 body: JSON.stringify({ record: { kitchen_id: kId, product_id: pId, type: type } })
-            }).catch(e => console.log("Push trigger failure"));
-            
+            }).catch(() => {});
             loadReports();
         }
     }
@@ -113,22 +113,31 @@
     }
 
     async function loadReports() {
-        const { data } = await supabaseClient.from('reports').select('id, type, kitchens(name), products(name)').neq('type', 'OK').order('id', { ascending: false });
+        const { data, error } = await supabaseClient.from('reports').select('id, type, kitchens(name), products(name)').neq('type', 'OK').order('id', { ascending: false });
+        if (error) return;
         const list = document.getElementById('reportsList');
         list.innerHTML = "";
         
         data?.forEach(r => {
             const wrapper = document.createElement("div");
             wrapper.className = "card-wrapper";
+            
             const card = document.createElement("div");
             card.className = `card ${r.type.toLowerCase()}`;
             card.innerHTML = `<div><b>${r.kitchens?.name || ''}</b><br>${r.products?.name || ''}</div><div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>`;
             
             if (isManager) {
-                const del = document.createElement("div");
-                del.className = "delete-action"; del.innerText = "מחיקה";
-                del.onclick = () => { if(confirm("למחוק דיווח זה?")) deleteReport(r.id); };
-                wrapper.appendChild(del);
+                // כפתור מחיקה למחשב
+                const pcDel = document.createElement("button");
+                pcDel.className = "pc-delete-btn";
+                pcDel.innerHTML = "✕";
+                pcDel.onclick = () => { if(confirm("למחוק?")) deleteReport(r.id); };
+                wrapper.appendChild(pcDel);
+
+                // סלייד למחיקה (לטלפון)
+                const delAction = document.createElement("div");
+                delAction.className = "delete-action"; delAction.innerText = "מחיקה";
+                wrapper.appendChild(delAction);
 
                 let startX = 0, currentX = 0;
                 card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; card.style.transition = "none"; }, {passive: true});
@@ -140,7 +149,6 @@
                     card.style.transition = "transform 0.3s ease";
                     if (currentX < -70) { if (confirm("למחוק?")) deleteReport(r.id); else card.style.transform = 'translateX(0)'; }
                     else card.style.transform = 'translateX(0)';
-                    currentX = 0;
                 });
             }
             wrapper.appendChild(card);
