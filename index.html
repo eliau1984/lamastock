@@ -28,14 +28,16 @@
         
         .buttons button:disabled { cursor: default; opacity: 1; }
 
-        .card-wrapper { position: relative; margin-bottom: 12px; display: flex; align-items: center; background: #ff3b30; border-radius: 20px; overflow: hidden; }
-        .card { background:white; position:relative; z-index:2; border-radius:20px; padding:20px; display: flex; justify-content: space-between; align-items: center; width: 100%; transition: transform 0.3s ease; }
+        .card-wrapper { position: relative; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+        .card { background:white; position:relative; z-index:2; border-radius:20px; padding:20px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.3s ease; }
         .card.missing { border-right:8px solid #ff3b30; }
         .card.low { border-right:8px solid #ffcc00; }
         
-        .delete-btn-pc { display: none; background: #ff3b30; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; margin-right: 10px; z-index: 10; min-width: 70px; }
+        /* כפתור מחיקה חדש - מופרד ונקי בצד ימין */
+        .delete-btn-pc { display: none; background: #ff3b30; color: white; border: none; padding: 10px 12px; border-radius: 15px; font-weight: bold; cursor: pointer; z-index: 10; font-size: 14px; white-space: nowrap; }
         .is-manager .delete-btn-pc { display: block; }
-        .delete-action-slide { position: absolute; right: 0; top: 0; bottom: 0; width: 100px; background: #ff3b30; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; z-index: 1; }
+        
+        .delete-action-slide { position: absolute; left: 0; top: 0; bottom: 0; width: 100px; background: #ff3b30; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; z-index: 1; border-radius: 20px 0 0 20px; }
     </style>
 </head>
 <body>
@@ -120,11 +122,12 @@
             const wrapper = document.createElement("div");
             wrapper.className = "card-wrapper";
             
+            // כפתור מחיקה חדש מימין (במקום בתוך הכרטיס)
             if (isManager) {
                 const pcDel = document.createElement("button");
                 pcDel.className = "delete-btn-pc";
                 pcDel.innerText = "מחיקה";
-                pcDel.onclick = () => { if(confirm("למחוק?")) deleteReport(r.id); };
+                pcDel.onclick = () => { if(confirm("למחוק דיווח זה?")) deleteReport(r.id); };
                 wrapper.appendChild(pcDel);
             }
 
@@ -141,11 +144,12 @@
                 card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; card.style.transition = "none"; }, {passive: true});
                 card.addEventListener('touchmove', e => {
                     currentX = e.touches[0].clientX - startX;
-                    if (currentX < 0 && currentX > -100) card.style.transform = `translateX(${currentX}px)`;
+                    // החלקה שמאלה (כי הכפתור נמצא ב-left: 0)
+                    if (currentX > 0 && currentX < 100) card.style.transform = `translateX(${currentX}px)`;
                 }, {passive: true});
                 card.addEventListener('touchend', () => {
                     card.style.transition = "transform 0.3s ease";
-                    if (currentX < -70) { if (confirm("למחוק?")) deleteReport(r.id); else card.style.transform = 'translateX(0)'; }
+                    if (currentX > 70) { if (confirm("למחוק?")) deleteReport(r.id); else card.style.transform = 'translateX(0)'; }
                     else card.style.transform = 'translateX(0)';
                     currentX = 0;
                 });
