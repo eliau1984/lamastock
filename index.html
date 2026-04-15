@@ -21,7 +21,7 @@
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
         .buttons button { flex:1; height: 110px; border-radius:22px; border:none; font-weight:800; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 18px; }
         
-        /* צבעים פעילים תמיד (גם כשחסום) */
+        /* צבעים שמרשימים גם במצב disabled */
         .missing-btn { background:#ff3b30 !important; color: white !important; }
         .low-btn { background:#ffcc00 !important; color: black !important; }
         .ok-btn { background:#34c759 !important; color: white !important; }
@@ -33,7 +33,6 @@
         .card.missing { border-right:8px solid #ff3b30; }
         .card.low { border-right:8px solid #ffcc00; }
         
-        /* כפתור מחיקה רגיל לצד הכרטיס במחשב */
         .delete-btn-pc { display: none; background: #ff3b30; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; margin-right: 10px; z-index: 10; min-width: 70px; }
         .is-manager .delete-btn-pc { display: block; }
         .delete-action-slide { position: absolute; right: 0; top: 0; bottom: 0; width: 100px; background: #ff3b30; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; z-index: 1; }
