@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LamaStock Pro v5</title>
+    <title>LamaStock Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -15,30 +15,29 @@
         #logoutBtn { display: none; background: #ff3b30; color: white; }
         .container { max-width:500px; margin:auto; padding:15px; }
         
-        /* מקרא צבעים לאיש משק */
         #managerLegend { display: none; background: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); flex-direction: column; gap: 8px; }
         .legend-item { display: flex; align-items: center; gap: 10px; font-weight: 600; }
         .dot { width: 15px; height: 15px; border-radius: 50%; }
 
-        select { width:100%; padding:18px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 18px; font-weight: 700; text-align: center; appearance: none; }
-        select:disabled { background: #e5e5ea; color: #8e8e93; opacity: 1; }
+        select { width:100%; padding:18px; margin-bottom:12px; border-radius:16px; border: 1px solid rgba(0,0,0,0.1); background:white; font-size: 18px; font-weight: 700; text-align: center; appearance: none; color: #000; opacity: 1 !important; }
+        select:disabled { background: #e5e5ea; color: #8e8e93; }
         
         .buttons { display:flex; gap:10px; margin-bottom: 25px; }
-        .buttons button { flex:1; height: 110px; border-radius:22px; border:none; font-weight:800; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 18px; }
-        .buttons button:disabled { opacity: 0.5; filter: grayscale(1); }
+        .buttons button { flex:1; height: 110px; border-radius:22px; border:none; font-weight:800; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 18px; opacity: 1 !important; }
+        .buttons button:disabled { filter: grayscale(1); opacity: 0.6 !important; }
         
         .missing-btn { background:#ff3b30; }
         .low-btn { background:#ffcc00; color: #000 !important; }
         .ok-btn { background:#34c759; }
 
-        .card-wrapper { position: relative; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
-        .card { background:white; border-radius:20px; padding:20px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.3s; }
+        .card-wrapper { position: relative; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; background: #ff3b30; border-radius: 20px; overflow: hidden; }
+        .card { background:white; position:relative; z-index:2; border-radius:20px; padding:20px; display: flex; justify-content: space-between; align-items: center; width: 100%; transition: transform 0.3s ease; }
         .card.missing { border-right:8px solid #ff3b30; }
         .card.low { border-right:8px solid #ffcc00; }
         
-        /* כפתור מחיקה ברור למחשב ונייד */
-        .delete-btn { display: none; background: #ff3b30; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; min-width: 70px; }
-        .is-manager .delete-btn { display: block; }
+        .delete-btn-left { display: none; background: #ff3b30; color: white; border: none; padding: 10px; border-radius: 12px; font-weight: bold; cursor: pointer; margin-right: 10px; z-index: 10; min-width: 60px; }
+        .is-manager .delete-btn-left { display: block; }
+        .delete-action-slide { position: absolute; right: 0; top: 0; bottom: 0; width: 100px; background: #ff3b30; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; z-index: 1; }
     </style>
 </head>
 <body>
@@ -47,22 +46,18 @@
         <button id="loginBtn" onclick="loginManager()">👤 איש משק</button>
         <button id="logoutBtn" onclick="logoutManager()">יציאה 👋</button>
     </div>
-    
     <div class="container">
         <div id="managerLegend">
-            <div class="legend-item"><div class="dot" style="background: #ff3b30;"></div> מוצר חסר (צריך להזמין)</div>
-            <div class="legend-item"><div class="dot" style="background: #ffcc00;"></div> חסר מעט (לשים לב)</div>
+            <div class="legend-item"><div class="dot" style="background: #ff3b30;"></div> מוצר חסר</div>
+            <div class="legend-item"><div class="dot" style="background: #ffcc00;"></div> חסר מעט</div>
         </div>
-
         <select id="kitchen" onchange="loadReports()"></select>
         <select id="product"></select>
-        
         <div class="buttons" id="actionButtons">
             <button class="missing-btn" onclick="report('MISSING')">❌<br>חסר</button>
             <button class="low-btn" onclick="report('LOW')">⚠️<br>מעט</button>
             <button class="ok-btn" onclick="report('OK')">✅<br>יש</button>
         </div>
-        
         <div id="reportsList"></div>
     </div>
 
@@ -77,9 +72,7 @@
         document.getElementById('logoutBtn').style.display = isManager ? 'block' : 'none';
         document.getElementById('managerLegend').style.display = isManager ? 'flex' : 'none';
         document.body.classList.toggle('is-manager', isManager);
-        
-        const elements = document.querySelectorAll('#actionButtons button, #kitchen, #product');
-        elements.forEach(el => el.disabled = isManager);
+        document.querySelectorAll('#actionButtons button, #kitchen, #product').forEach(el => el.disabled = isManager);
     }
 
     async function loginManager() {
@@ -88,66 +81,82 @@
             isManager = true;
             updateUI();
             loadReports();
-        } else if (pass !== null) alert("סיסמה שגויה");
+            alert("ברוך הבא, מצב עריכה פעיל ✅");
+        } else if (pass !== null) {
+            alert("❌ סיסמה שגויה! הגישה נדחתה.");
+        }
     }
 
     function logoutManager() {
         isManager = false;
         updateUI();
         loadReports();
+        alert("יצאת ממצב איש משק. מצב מדווח פעיל 👋");
     }
 
     async function report(type) {
         if (isManager) return;
         const kId = document.getElementById('kitchen').value;
         const pId = document.getElementById('product').value;
-        
         const { error } = await supabaseClient.from('reports').upsert(
             { kitchen_id: parseInt(kId), product_id: parseInt(pId), type: type },
             { onConflict: 'kitchen_id,product_id' }
         );
-        
         if (!error) {
             if (type === 'OK') confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-            
-            // שליחת פוש עם לוג לדיבאגינג
             fetch(`${SUPABASE_URL}/functions/v1/push-notification`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
                 body: JSON.stringify({ record: { kitchen_id: kId, product_id: pId, type: type } })
-            }).then(r => console.log("Push result:", r.status))
-              .catch(e => console.error("Push fetch error:", e));
-
+            }).catch(() => {});
             loadReports();
         }
     }
 
     async function deleteReport(id) {
-        const { error } = await supabaseClient.from('reports').delete().eq('id', id);
-        if (!error) loadReports();
+        if (!isManager) return;
+        await supabaseClient.from('reports').delete().eq('id', id);
+        loadReports();
     }
 
     async function loadReports() {
         const { data } = await supabaseClient.from('reports').select('id, type, kitchens(name), products(name)').neq('type', 'OK').order('id', { ascending: false });
         const list = document.getElementById('reportsList');
         list.innerHTML = "";
-        
         data?.forEach(r => {
             const wrapper = document.createElement("div");
             wrapper.className = "card-wrapper";
             
+            if (isManager) {
+                const pcDel = document.createElement("button");
+                pcDel.className = "delete-btn-left";
+                pcDel.innerText = "מחיקה";
+                pcDel.onclick = () => { if(confirm("למחוק?")) deleteReport(r.id); };
+                wrapper.appendChild(pcDel);
+            }
+
             const card = document.createElement("div");
             card.className = `card ${r.type.toLowerCase()}`;
             card.innerHTML = `<div><b>${r.kitchens?.name || ''}</b><br>${r.products?.name || ''}</div><div>${r.type === 'MISSING' ? '❌' : '⚠️'}</div>`;
             
             if (isManager) {
-                const delBtn = document.createElement("button");
-                delBtn.className = "delete-btn";
-                delBtn.innerText = "מחיקה";
-                delBtn.onclick = () => { if(confirm("למחוק דיווח?")) deleteReport(r.id); };
-                wrapper.appendChild(delBtn);
+                const slideDel = document.createElement("div");
+                slideDel.className = "delete-action-slide"; slideDel.innerText = "מחיקה";
+                wrapper.appendChild(slideDel);
+
+                let startX = 0, currentX = 0;
+                card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; card.style.transition = "none"; }, {passive: true});
+                card.addEventListener('touchmove', e => {
+                    currentX = e.touches[0].clientX - startX;
+                    if (currentX < 0 && currentX > -100) card.style.transform = `translateX(${currentX}px)`;
+                }, {passive: true});
+                card.addEventListener('touchend', () => {
+                    card.style.transition = "transform 0.3s ease";
+                    if (currentX < -70) { if (confirm("למחוק?")) deleteReport(r.id); else card.style.transform = 'translateX(0)'; }
+                    else card.style.transform = 'translateX(0)';
+                    currentX = 0;
+                });
             }
-            
             wrapper.appendChild(card);
             list.appendChild(wrapper);
         });
@@ -163,6 +172,7 @@
         loadReports();
     }
     init();
+    supabaseClient.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => loadReports()).subscribe();
 </script>
 </body>
 </html>
